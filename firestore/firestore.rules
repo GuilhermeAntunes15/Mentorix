@@ -1,0 +1,102 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function userDoc() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid));
+    }
+
+    function hasUserProfile() {
+      return isAuthenticated() && userDoc().exists();
+    }
+
+    function role() {
+      return hasUserProfile() ? userDoc().data.role : null;
+    }
+
+    function isAdmin() {
+      return role() == 'admin';
+    }
+
+    function isProfessor() {
+      return role() == 'professor';
+    }
+
+    function isStudent() {
+      return role() == 'aluno';
+    }
+
+    function ownerProfessorId() {
+      return hasUserProfile() ? userDoc().data.professorId : null;
+    }
+
+    function ownsProfessorDocument(data) {
+      return hasUserProfile() && data.professorId == ownerProfessorId();
+    }
+
+    match /users/{userId} {
+      allow create: if isAuthenticated() && request.auth.uid == userId;
+      allow read, update: if isAuthenticated() && (request.auth.uid == userId || isAdmin());
+      allow delete: if isAdmin();
+    }
+
+    match /materiasPessoais/{documentId} {
+      allow read, delete: if isAuthenticated()
+        && resource.data.userId == request.auth.uid
+        && resource.data.professorId == ownerProfessorId();
+      allow create, update: if isAuthenticated()
+        && request.resource.data.userId == request.auth.uid
+        && request.resource.data.professorId == ownerProfessorId();
+    }
+
+    match /agendaPessoal/{documentId} {
+      allow read, delete: if isAuthenticated()
+        && resource.data.userId == request.auth.uid
+        && resource.data.professorId == ownerProfessorId();
+      allow create, update: if isAuthenticated()
+        && request.resource.data.userId == request.auth.uid
+        && request.resource.data.professorId == ownerProfessorId();
+    }
+
+    match /avisosMural/{documentId} {
+      allow read: if isAuthenticated() && (isAdmin() || ownsProfessorDocument(resource.data));
+      allow create, update, delete: if isAuthenticated() && (
+        isAdmin() ||
+        (isProfessor() && request.resource.data.professorId == request.auth.uid)
+      );
+    }
+
+    match /curtidasAvisoMural/{documentId} {
+      allow read: if isAuthenticated() && (isAdmin() || ownsProfessorDocument(resource.data));
+      allow create: if isAuthenticated()
+        && request.resource.data.userId == request.auth.uid
+        && request.resource.data.professorId == ownerProfessorId();
+      allow delete: if isAuthenticated() && (
+        isAdmin() ||
+        (resource.data.userId == request.auth.uid && resource.data.professorId == ownerProfessorId())
+      );
+    }
+
+    match /{collection}/{documentId} {
+      allow create: if isAuthenticated() && (
+        isAdmin() ||
+        (isProfessor() && request.resource.data.professorId == request.auth.uid)
+      );
+
+      allow read: if isAuthenticated() && (
+        isAdmin() ||
+        (isProfessor() && resource.data.professorId == request.auth.uid) ||
+        (isStudent() && resource.data.professorId == ownerProfessorId())
+      );
+
+      allow update, delete: if isAuthenticated() && (
+        isAdmin() ||
+        (isProfessor() && resource.data.professorId == request.auth.uid)
+      );
+    }
+  }
+}

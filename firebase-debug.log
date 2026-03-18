@@ -1,0 +1,19 @@
+[debug] [2026-03-17T21:16:00.524Z] ----------------------------------------------------------------------
+[debug] [2026-03-17T21:16:00.529Z] Command:       C:\Program Files\nodejs\node.exe C:\Users\gusta\AppData\Roaming\npm\node_modules\firebase-tools\lib\bin\firebase.js init
+[debug] [2026-03-17T21:16:00.530Z] CLI Version:   15.10.1
+[debug] [2026-03-17T21:16:00.530Z] Platform:      win32
+[debug] [2026-03-17T21:16:00.530Z] Node Version:  v24.14.0
+[debug] [2026-03-17T21:16:00.530Z] Time:          Tue Mar 17 2026 18:16:00 GMT-0300 (Horário Padrão de Brasília)
+[debug] [2026-03-17T21:16:00.530Z] ----------------------------------------------------------------------
+[debug] 
+[info] 
+     ######## #### ########  ######## ########     ###     ######  ########
+     ##        ##  ##     ## ##       ##     ##  ##   ##  ##       ##
+     ######    ##  ########  ######   ########  #########  ######  ######
+     ##        ##  ##    ##  ##       ##     ## ##     ##       ## ##
+     ##       #### ##     ## ######## ########  ##     ##  ######  ########
+
+You're about to initialize a Firebase project in this directory:
+
+  C:\Users\gusta\Downloads\Projetos\Mentorix
+
