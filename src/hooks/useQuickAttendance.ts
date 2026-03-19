@@ -15,6 +15,10 @@ interface QuickAttendanceRow {
   status: PresenceStatus;
 }
 
+const nameCollator = new Intl.Collator('pt-BR', {
+  sensitivity: 'base'
+});
+
 export function useQuickAttendance(professorId: string, lessonId: string | undefined, turmaId: string | undefined, date: string) {
   const [attendance, setAttendance] = useState<ChamadaEntity | null>(null);
   const [rows, setRows] = useState<QuickAttendanceRow[]>([]);
@@ -54,6 +58,7 @@ export function useQuickAttendance(professorId: string, lessonId: string | undef
               status: frequency?.status ?? 'presente'
             };
           })
+          .sort((left, right) => nameCollator.compare(left.nome, right.nome))
       );
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Nao foi possivel preparar a chamada.');

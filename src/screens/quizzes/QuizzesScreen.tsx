@@ -1,4 +1,4 @@
-import { Plus } from 'lucide-react';
+import { Plus, Trash2 } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { Badge } from '@/components/common/Badge';
 import { Button } from '@/components/common/Button';
@@ -35,6 +35,64 @@ interface FastFillRow {
   nota: number;
 }
 
+interface QuizDraft {
+  id: string;
+  titulo: string;
+}
+
+const nameCollator = new Intl.Collator('pt-BR', {
+  sensitivity: 'base'
+});
+
+function createQuizDraft(): QuizDraft {
+  return {
+    id: globalThis.crypto?.randomUUID?.() ?? `quiz-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+    titulo: ''
+  };
+}
+
+function CompactChoice({
+  active,
+  label,
+  tone = 'default',
+  onClick
+}: {
+  active: boolean;
+  label: string;
+  tone?: 'default' | 'success' | 'danger';
+  onClick: () => void;
+}) {
+  const background =
+    tone === 'success'
+      ? active
+        ? 'linear-gradient(135deg, #7dd3fc 0%, #34d399 100%)'
+        : 'rgba(15, 23, 42, 0.56)'
+      : tone === 'danger'
+        ? active
+          ? 'rgba(251, 113, 133, 0.22)'
+          : 'rgba(15, 23, 42, 0.56)'
+        : active
+          ? 'rgba(125, 211, 252, 0.18)'
+          : 'rgba(15, 23, 42, 0.56)';
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      style={{
+        border: `1px solid ${active ? 'rgba(125, 211, 252, 0.35)' : 'rgba(148, 163, 184, 0.14)'}`,
+        background,
+        color: active && tone === 'success' ? '#08111f' : '#e2e8f0',
+        borderRadius: 999,
+        padding: '0.55rem 0.9rem',
+        fontWeight: 700
+      }}
+    >
+      {label}
+    </button>
+  );
+}
+
 export function QuizzesScreen() {
   const { professorId } = useProfessor();
   const classes = useCollectionResource(professorId, classesRepository);
@@ -44,14 +102,17 @@ export function QuizzesScreen() {
   const [mode, setMode] = useState<AssessmentMode>('quiz');
   const [createOpen, setCreateOpen] = useState(false);
   const [fillOpen, setFillOpen] = useState(false);
+  const [subjectFilterId, setSubjectFilterId] = useState('');
+  const [typeFilter, setTypeFilter] = useState<'todos' | AssessmentMode>('todos');
+  const [sortMode, setSortMode] = useState<'data' | 'alfabetica'>('data');
   const [form, setForm] = useState({
     turmaId: '',
     materiaId: '',
     titulo: '',
     data: toISODate(new Date()),
-    totalQuestoes: 10,
     notaMaxima: 10
   });
+  const [quizDrafts, setQuizDrafts] = useState<QuizDraft[]>([createQuizDraft()]);
   const [selectedItem, setSelectedItem] = useState<
     | { id: string; tipo: AssessmentMode; turmaId: string; titulo: string; maxValue: number }
     | null
@@ -69,12 +130,37 @@ export function QuizzesScreen() {
     () => [
       ...quizzes.items.map((item) => ({ ...item, tipo: 'quiz' as const })),
       ...activities.items.map((item) => ({ ...item, tipo: 'atividade' as const }))
-    ].sort((left, right) => {
-      const leftDate = 'data' in left ? left.data : left.dataEntrega;
-      const rightDate = 'data' in right ? right.data : right.dataEntrega;
-      return `${rightDate}`.localeCompare(`${leftDate}`);
-    }),
+    ],
     [activities.items, quizzes.items]
+  );
+  const filterSubjectOptions = useMemo(
+    () =>
+      [...subjects.items]
+        .sort((left, right) => nameCollator.compare(left.nome, right.nome))
+        .map((item) => ({ value: item.id, label: item.nome })),
+    [subjects.items]
+  );
+  const filteredItems = useMemo(
+    () =>
+      combinedItems.filter((item) => {
+        const matchesSubject = !subjectFilterId || item.materiaId === subjectFilterId;
+        const matchesType = typeFilter === 'todos' || item.tipo === typeFilter;
+        return matchesSubject && matchesType;
+      }),
+    [combinedItems, subjectFilterId, typeFilter]
+  );
+  const orderedItems = useMemo(
+    () =>
+      [...filteredItems].sort((left, right) => {
+        if (sortMode === 'alfabetica') {
+          return nameCollator.compare(left.titulo, right.titulo);
+        }
+
+        const leftDate = 'data' in left ? left.data : left.dataEntrega;
+        const rightDate = 'data' in right ? right.data : right.dataEntrega;
+        return `${rightDate}`.localeCompare(`${leftDate}`);
+      }),
+    [filteredItems, sortMode]
   );
 
   async function buildRows(turmaId: string, tipo: AssessmentMode, itemId?: string, maxValue?: number) {
@@ -90,7 +176,8 @@ export function QuizzesScreen() {
         .map((relation) => ({
           alunoId: relation.alunoId,
           nome: students.find((student) => student.id === relation.alunoId)?.nome ?? 'Aluno'
-        }));
+        }))
+        .sort((left, right) => nameCollator.compare(left.nome, right.nome));
 
       if (!itemId) {
         setRows(
@@ -99,7 +186,7 @@ export function QuizzesScreen() {
             nome: student.nome,
             realizado: true,
             acertouDePrimeira: true,
-            nota: maxValue ?? 10
+            nota: tipo === 'quiz' ? 1 : maxValue ?? 10
           }))
         );
         return;
@@ -115,7 +202,7 @@ export function QuizzesScreen() {
               nome: student.nome,
               realizado: attempt?.realizado ?? true,
               acertouDePrimeira: attempt?.acertouDePrimeira ?? true,
-              nota: attempt?.acertos ?? (maxValue ?? 10)
+              nota: typeof attempt?.acertos === 'number' ? Number(attempt.acertos) : 1
             };
           })
         );
@@ -140,19 +227,49 @@ export function QuizzesScreen() {
     }
   }
 
+  function resetCreateState() {
+    setForm({
+      turmaId: '',
+      materiaId: '',
+      titulo: '',
+      data: toISODate(new Date()),
+      notaMaxima: 10
+    });
+    setQuizDrafts([createQuizDraft()]);
+  }
+
   async function handleCreate(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
     if (mode === 'quiz') {
-      const created = await quizzes.createItem({
-        turmaId: form.turmaId,
-        materiaId: form.materiaId,
-        titulo: form.titulo,
-        data: form.data,
-        totalQuestoes: Number(form.totalQuestoes)
+      const drafts = quizDrafts.map((item) => item.titulo.trim()).filter(Boolean);
+
+      if (!drafts.length) {
+        return;
+      }
+
+      const createdItems: QuizEntity[] = [];
+
+      for (const title of drafts) {
+        const created = await quizzes.createItem({
+          turmaId: form.turmaId,
+          materiaId: form.materiaId,
+          titulo: title,
+          data: form.data,
+          totalQuestoes: 1
+        });
+        createdItems.push(created);
+      }
+
+      const firstCreated = createdItems[0];
+      setSelectedItem({
+        id: firstCreated.id,
+        tipo: 'quiz',
+        turmaId: firstCreated.turmaId,
+        titulo: firstCreated.titulo,
+        maxValue: 1
       });
-      setSelectedItem({ id: created.id, tipo: 'quiz', turmaId: created.turmaId, titulo: created.titulo, maxValue: created.totalQuestoes });
-      await buildRows(created.turmaId, 'quiz', created.id, created.totalQuestoes);
+      await buildRows(firstCreated.turmaId, 'quiz', firstCreated.id, 1);
     } else {
       const created = await activities.createItem({
         turmaId: form.turmaId,
@@ -168,10 +285,11 @@ export function QuizzesScreen() {
 
     setCreateOpen(false);
     setFillOpen(true);
+    resetCreateState();
   }
 
   async function openItem(item: (QuizEntity | AtividadeEntity) & { tipo: AssessmentMode }) {
-    const maxValue = item.tipo === 'quiz' ? Number((item as QuizEntity).totalQuestoes) : Number((item as AtividadeEntity).notaMaxima ?? 10);
+    const maxValue = item.tipo === 'quiz' ? 1 : Number((item as AtividadeEntity).notaMaxima ?? 10);
     setSelectedItem({ id: item.id, tipo: item.tipo, turmaId: item.turmaId, titulo: item.titulo, maxValue });
     await buildRows(item.turmaId, item.tipo, item.id, maxValue);
     setFillOpen(true);
@@ -192,9 +310,9 @@ export function QuizzesScreen() {
           rows.map((row) => ({
             alunoId: row.alunoId,
             realizado: row.realizado,
-            acertouDePrimeira: row.realizado ? row.acertouDePrimeira : false,
-            acertos: row.realizado ? Math.max(0, Math.min(selectedItem.maxValue, row.nota)) : 0,
-            tentativas: row.realizado ? (row.acertouDePrimeira ? 1 : 2) : 0
+            acertouDePrimeira: row.realizado && row.nota > 0,
+            acertos: row.realizado ? row.nota : 0,
+            tentativas: row.realizado ? 1 : 0
           }))
         );
       } else {
@@ -215,26 +333,75 @@ export function QuizzesScreen() {
     }
   }
 
+  function updateQuizRow(alunoId: string, patch: Partial<FastFillRow>) {
+    setRows((current) =>
+      current.map((item) =>
+        item.alunoId === alunoId
+          ? {
+              ...item,
+              ...patch
+            }
+          : item
+      )
+    );
+  }
+
   return (
     <>
       <PageHeader
         eyebrow="Avaliacoes"
         title="Quizzes e atividades em um lugar so"
-        description="Crie e lance a turma inteira via modal, com preenchimento rapido e default positivo."
+        description="Lancamento rapido, mais compacto, com quiz de 1 pergunta e criacao em lote."
         actions={<IconButton onClick={() => setCreateOpen(true)}><Plus size={18} /> Novo lancamento</IconButton>}
       />
 
       <section style={{ display: 'grid', gap: '1rem' }}>
+        <Card title="Filtros" subtitle="Refine a listagem por materia e por tipo de avaliacao.">
+          <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+            <Select
+              label="Materia"
+              value={subjectFilterId}
+              onChange={(event) => setSubjectFilterId(event.target.value)}
+              options={[
+                { value: '', label: 'Todas as materias' },
+                ...filterSubjectOptions
+              ]}
+            />
+            <Select
+              label="Tipo de avaliacao"
+              value={typeFilter}
+              onChange={(event) => setTypeFilter(event.target.value as 'todos' | AssessmentMode)}
+              options={[
+                { value: 'todos', label: 'Todos os tipos' },
+                { value: 'quiz', label: 'Quiz' },
+                { value: 'atividade', label: 'Atividade' }
+              ]}
+            />
+            <Select
+              label="Ordenacao"
+              value={sortMode}
+              onChange={(event) => setSortMode(event.target.value as 'data' | 'alfabetica')}
+              options={[
+                { value: 'data', label: 'Mais recentes primeiro' },
+                { value: 'alfabetica', label: 'Ordem alfabetica' }
+              ]}
+            />
+          </div>
+        </Card>
+
         {(quizzes.loading || activities.loading) && <LoadingState label="Carregando avaliacoes..." />}
         {(quizzes.error || activities.error) && <ErrorState message={quizzes.error ?? activities.error ?? 'Erro ao carregar avaliacoes.'} />}
         {!quizzes.loading && !activities.loading && !combinedItems.length && (
           <EmptyState title="Nenhum quiz ou atividade" description="Crie o primeiro item e lance rapidamente a turma completa." />
         )}
-        {combinedItems.map((item) => {
+        {!quizzes.loading && !activities.loading && !!combinedItems.length && !filteredItems.length && (
+          <EmptyState title="Nenhum resultado para os filtros" description="Ajuste os filtros de materia ou tipo de avaliacao para ver outros lancamentos." />
+        )}
+        {orderedItems.map((item) => {
           const turma = classes.items.find((entry) => entry.id === item.turmaId);
           const materia = subjects.items.find((entry) => entry.id === item.materiaId);
           const dateLabel = item.tipo === 'quiz' ? (item as QuizEntity).data : (item as AtividadeEntity).dataEntrega;
-          const helper = item.tipo === 'quiz' ? `${(item as QuizEntity).totalQuestoes} questoes` : `${(item as AtividadeEntity).notaMaxima ?? '-'} pts`;
+          const helper = item.tipo === 'quiz' ? '1 pergunta' : `${(item as AtividadeEntity).notaMaxima ?? '-'} pts`;
 
           return (
             <Card key={`${item.tipo}-${item.id}`} title={item.titulo} subtitle={`${materia?.nome ?? 'Materia'} - ${turma?.nome ?? 'Turma'} - ${dateLabel}`} actions={<Badge>{item.tipo}</Badge>}>
@@ -250,18 +417,75 @@ export function QuizzesScreen() {
 
       <Modal open={createOpen} onClose={() => setCreateOpen(false)} title="Novo lancamento">
         <form onSubmit={handleCreate} style={{ display: 'grid', gap: '1rem', marginTop: '1rem' }}>
-          <Select label="Tipo" value={mode} onChange={(event) => setMode(event.target.value as AssessmentMode)} options={[{ value: 'quiz', label: 'Quiz' }, { value: 'atividade', label: 'Atividade' }]} />
-          <Select label="Turma" value={form.turmaId} onChange={(event) => setForm({ ...form, turmaId: event.target.value, materiaId: '' })} options={[{ value: '', label: 'Selecione uma turma' }, ...classes.items.map((item) => ({ value: item.id, label: item.nome }))]} required />
-          <Select label="Materia" value={form.materiaId} onChange={(event) => setForm({ ...form, materiaId: event.target.value })} options={[{ value: '', label: 'Selecione uma materia' }, ...filteredSubjects.map((item) => ({ value: item.id, label: item.nome }))]} required />
-          <Input label="Titulo" value={form.titulo} onChange={(event) => setForm({ ...form, titulo: event.target.value })} required />
-          <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
-            <Input label={mode === 'quiz' ? 'Data do quiz' : 'Data de entrega'} type="date" value={form.data} onChange={(event) => setForm({ ...form, data: event.target.value })} />
-            {mode === 'quiz' ? (
-              <Input label="Total de questoes" type="number" value={String(form.totalQuestoes)} onChange={(event) => setForm({ ...form, totalQuestoes: Number(event.target.value) })} />
-            ) : (
+          <Select
+            label="Tipo"
+            value={mode}
+            onChange={(event) => setMode(event.target.value as AssessmentMode)}
+            options={[
+              { value: 'quiz', label: 'Quiz' },
+              { value: 'atividade', label: 'Atividade' }
+            ]}
+          />
+          <Select
+            label="Turma"
+            value={form.turmaId}
+            onChange={(event) => setForm({ ...form, turmaId: event.target.value, materiaId: '' })}
+            options={[{ value: '', label: 'Selecione uma turma' }, ...classes.items.map((item) => ({ value: item.id, label: item.nome }))]}
+            required
+          />
+          <Select
+            label="Materia"
+            value={form.materiaId}
+            onChange={(event) => setForm({ ...form, materiaId: event.target.value })}
+            options={[{ value: '', label: 'Selecione uma materia' }, ...filteredSubjects.map((item) => ({ value: item.id, label: item.nome }))]}
+            required
+          />
+          <Input
+            label={mode === 'quiz' ? 'Data do lote de quizzes' : 'Data de entrega'}
+            type="date"
+            value={form.data}
+            onChange={(event) => setForm({ ...form, data: event.target.value })}
+          />
+
+          {mode === 'quiz' ? (
+            <Card title="Quizzes do dia" subtitle="Cada quiz tem 1 pergunta. Adicione quantos itens quiser e nomeie cada um.">
+              <div style={{ display: 'grid', gap: '0.85rem' }}>
+                {quizDrafts.map((draft, index) => (
+                  <div key={draft.id} style={{ display: 'flex', gap: '0.75rem', alignItems: 'end', flexWrap: 'wrap' }}>
+                    <Input
+                      label={`Quiz ${index + 1}`}
+                      value={draft.titulo}
+                      onChange={(event) =>
+                        setQuizDrafts((current) =>
+                          current.map((item) => (item.id === draft.id ? { ...item, titulo: event.target.value } : item))
+                        )
+                      }
+                      required
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      onClick={() =>
+                        setQuizDrafts((current) => (current.length > 1 ? current.filter((item) => item.id !== draft.id) : current))
+                      }
+                      disabled={quizDrafts.length === 1}
+                    >
+                      <Trash2 size={16} /> Remover
+                    </Button>
+                  </div>
+                ))}
+                <Button type="button" variant="secondary" onClick={() => setQuizDrafts((current) => [...current, createQuizDraft()])}>
+                  <Plus size={18} /> Adicionar quiz
+                </Button>
+              </div>
+            </Card>
+          ) : (
+            <>
+              <Input label="Titulo" value={form.titulo} onChange={(event) => setForm({ ...form, titulo: event.target.value })} required />
               <Input label="Nota maxima" type="number" value={String(form.notaMaxima)} onChange={(event) => setForm({ ...form, notaMaxima: Number(event.target.value) })} />
-            )}
-          </div>
+            </>
+          )}
+
           <Button type="submit">Criar e abrir preenchimento</Button>
         </form>
       </Modal>
@@ -270,27 +494,124 @@ export function QuizzesScreen() {
         {panelLoading && <LoadingState label="Montando turma..." />}
         {!panelLoading && selectedItem && (
           <div style={{ display: 'grid', gap: '1rem', marginTop: '1rem' }}>
-            {rows.map((row) => (
-              <Card key={row.alunoId} title={row.nome} actions={<Badge tone={row.realizado ? 'success' : 'warning'}>{row.realizado ? 'ok' : 'pendente'}</Badge>}>
-                <div style={{ display: 'grid', gap: '0.85rem' }}>
-                  <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
-                    <Button variant={row.realizado ? 'primary' : 'secondary'} onClick={() => setRows((current) => current.map((item) => item.alunoId === row.alunoId ? { ...item, realizado: true } : item))}>
-                      {selectedItem.tipo === 'quiz' ? 'Fez' : 'Entregou'}
-                    </Button>
-                    <Button variant={!row.realizado ? 'danger' : 'secondary'} onClick={() => setRows((current) => current.map((item) => item.alunoId === row.alunoId ? { ...item, realizado: false, acertouDePrimeira: false } : item))}>
-                      {selectedItem.tipo === 'quiz' ? 'Nao fez' : 'Nao entregou'}
-                    </Button>
-                    {selectedItem.tipo === 'quiz' && (
-                      <Button variant={row.acertouDePrimeira ? 'secondary' : 'ghost'} onClick={() => setRows((current) => current.map((item) => item.alunoId === row.alunoId ? { ...item, acertouDePrimeira: !item.acertouDePrimeira } : item))}>
-                        {row.acertouDePrimeira ? 'Acertou de primeira' : 'Nao acertou de primeira'}
-                      </Button>
+            <Card
+              title={selectedItem.tipo === 'quiz' ? 'Lancamento rapido do quiz' : 'Lancamento rapido da atividade'}
+              subtitle={selectedItem.tipo === 'quiz' ? 'Cada linha ja vem pronta para preenchimento em 1 pergunta.' : 'Entregou ou nao entregou, com nota ao lado.'}
+            >
+              <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+                <Button
+                  variant="secondary"
+                  onClick={() =>
+                    setRows((current) =>
+                      current.map((row) => ({
+                        ...row,
+                        realizado: true,
+                        acertouDePrimeira: selectedItem.tipo === 'quiz' ? true : row.acertouDePrimeira,
+                        nota: selectedItem.tipo === 'quiz' ? 1 : selectedItem.maxValue
+                      }))
+                    )
+                  }
+                >
+                  {selectedItem.tipo === 'quiz' ? 'Todos fizeram e acertaram' : 'Todos entregaram'}
+                </Button>
+                <Button
+                  variant="ghost"
+                  onClick={() =>
+                    setRows((current) =>
+                      current.map((row) => ({
+                        ...row,
+                        realizado: false,
+                        acertouDePrimeira: false,
+                        nota: selectedItem.tipo === 'quiz' ? 0 : row.nota
+                      }))
+                    )
+                  }
+                >
+                  {selectedItem.tipo === 'quiz' ? 'Todos nao fizeram' : 'Todos pendentes'}
+                </Button>
+              </div>
+            </Card>
+
+            <Card title="Turma" subtitle="Preencha linha por linha, sem repetir cabecalhos grandes.">
+              <div style={{ display: 'grid', gap: '0.85rem' }}>
+                {rows.map((row) => (
+                  <div
+                    key={row.alunoId}
+                    style={{
+                      display: 'grid',
+                      gap: '0.75rem',
+                      paddingBottom: '0.85rem',
+                      borderBottom: '1px solid rgba(148, 163, 184, 0.08)'
+                    }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem', alignItems: 'center', flexWrap: 'wrap' }}>
+                      <strong>{row.nome}</strong>
+                      <Badge tone={row.realizado ? 'success' : 'warning'}>{row.realizado ? 'ok' : 'pendente'}</Badge>
+                    </div>
+
+                    {selectedItem.tipo === 'quiz' ? (
+                      <div style={{ display: 'flex', gap: '0.65rem', flexWrap: 'wrap', alignItems: 'center' }}>
+                        <CompactChoice
+                          active={row.realizado}
+                          label="Fez"
+                          tone="success"
+                          onClick={() => updateQuizRow(row.alunoId, { realizado: true, nota: row.nota > 0 ? row.nota : 1 })}
+                        />
+                        <CompactChoice
+                          active={!row.realizado}
+                          label="Nao fez"
+                          tone="danger"
+                          onClick={() => updateQuizRow(row.alunoId, { realizado: false, acertouDePrimeira: false, nota: 0 })}
+                        />
+                        <CompactChoice
+                          active={row.realizado && row.nota > 0}
+                          label="Acertou"
+                          onClick={() => updateQuizRow(row.alunoId, { realizado: true, nota: 1, acertouDePrimeira: true })}
+                        />
+                        <CompactChoice
+                          active={row.realizado && row.nota === 0}
+                          label="Errou"
+                          onClick={() => updateQuizRow(row.alunoId, { realizado: true, acertouDePrimeira: false, nota: 0 })}
+                        />
+                      </div>
+                    ) : (
+                      <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'center' }}>
+                        <CompactChoice
+                          active={row.realizado}
+                          label="Entregou"
+                          tone="success"
+                          onClick={() => setRows((current) => current.map((item) => item.alunoId === row.alunoId ? { ...item, realizado: true } : item))}
+                        />
+                        <CompactChoice
+                          active={!row.realizado}
+                          label="Nao entregou"
+                          tone="danger"
+                          onClick={() => setRows((current) => current.map((item) => item.alunoId === row.alunoId ? { ...item, realizado: false } : item))}
+                        />
+                        <div style={{ minWidth: 120 }}>
+                          <Input
+                            label="Nota"
+                            type="number"
+                            value={String(row.nota)}
+                            onChange={(event) =>
+                              setRows((current) =>
+                                current.map((item) =>
+                                  item.alunoId === row.alunoId ? { ...item, nota: Number(event.target.value) } : item
+                                )
+                              )
+                            }
+                          />
+                        </div>
+                      </div>
                     )}
                   </div>
-                  <Input label={selectedItem.tipo === 'quiz' ? 'Acertos' : 'Nota'} type="number" value={String(row.nota)} onChange={(event) => setRows((current) => current.map((item) => item.alunoId === row.alunoId ? { ...item, nota: Number(event.target.value) } : item))} />
-                </div>
-              </Card>
-            ))}
-            <Button onClick={() => void saveFastFill()} disabled={savingRows}>{savingRows ? 'Salvando...' : 'Salvar lancamento'}</Button>
+                ))}
+              </div>
+            </Card>
+
+            <Button onClick={() => void saveFastFill()} disabled={savingRows}>
+              {savingRows ? 'Salvando...' : 'Salvar lancamento'}
+            </Button>
           </div>
         )}
       </Modal>
