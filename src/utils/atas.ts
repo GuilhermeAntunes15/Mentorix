@@ -1,4 +1,5 @@
 import { sha256Text } from '@/utils/crypto';
+import { printHtmlDocument } from '@/utils/print';
 import type { AtaAssinaturaEntity, AtaEntity } from '@/types';
 
 function normalizeHtml(value: string) {
@@ -86,12 +87,6 @@ export function openAtaPrintWindow({
   ata: AtaEntity;
   signatures: Array<AtaAssinaturaEntity & { isValid: boolean }>;
 }) {
-  const printWindow = window.open('', '_blank', 'noopener,noreferrer,width=980,height=840');
-
-  if (!printWindow) {
-    throw new Error('Nao foi possivel abrir a janela de impressao. Verifique se o navegador bloqueou pop-ups.');
-  }
-
   const signaturesHtml = signatures.length
     ? signatures
         .map(
@@ -108,7 +103,7 @@ export function openAtaPrintWindow({
         .join('')
     : '<p>Nenhuma assinatura registrada ate o momento.</p>';
 
-  printWindow.document.write(`
+  printHtmlDocument(`
     <!doctype html>
     <html lang="pt-BR">
       <head>
@@ -183,10 +178,4 @@ export function openAtaPrintWindow({
       </body>
     </html>
   `);
-
-  printWindow.document.close();
-  printWindow.focus();
-  printWindow.setTimeout(() => {
-    printWindow.print();
-  }, 300);
 }

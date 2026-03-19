@@ -1,4 +1,5 @@
 import type { StudentDashboardMetrics, StudentDetailBundle } from '@/types';
+import { printHtmlDocument } from '@/utils/print';
 
 function escapeHtml(value: string) {
   return value
@@ -72,12 +73,6 @@ export function openStudentReportPrintWindow({
   attendanceBySubject: Array<{ nome: string; percentual: number }>;
   makeupSummary: { passadas: number; pendentes: number; entregues: number };
 }) {
-  const printWindow = window.open('', '_blank', 'noopener,noreferrer,width=1080,height=920');
-
-  if (!printWindow) {
-    throw new Error('Nao foi possivel abrir a janela do relatorio. Verifique se o navegador bloqueou pop-ups.');
-  }
-
   const generatedAt = new Date();
   const pendingActivities = data.atividadesPendentes
     .map((item) => item.atividade?.titulo ?? 'Atividade pendente')
@@ -86,7 +81,7 @@ export function openStudentReportPrintWindow({
   const classes = data.turmas.map((turma) => turma.nome).sort((left, right) => left.localeCompare(right, 'pt-BR'));
   const subjects = data.materias.map((materia) => materia.nome).sort((left, right) => left.localeCompare(right, 'pt-BR'));
 
-  printWindow.document.write(`
+  printHtmlDocument(`
     <!doctype html>
     <html lang="pt-BR">
       <head>
@@ -396,10 +391,4 @@ export function openStudentReportPrintWindow({
       </body>
     </html>
   `);
-
-  printWindow.document.close();
-  printWindow.focus();
-  printWindow.setTimeout(() => {
-    printWindow.print();
-  }, 300);
 }
