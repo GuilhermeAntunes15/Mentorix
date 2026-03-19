@@ -12,6 +12,7 @@ export type CompetitionViewMode = 'professor' | 'aluno';
 export type UserRole = 'admin' | 'professor' | 'aluno';
 export type NoticeType = 'importante' | 'aviso' | 'evento';
 export type NoticeAudience = 'todas_turmas' | 'turma' | 'professor';
+export type AtaStatus = 'rascunho' | 'aguardando_assinaturas' | 'assinada_parcialmente' | 'concluida';
 
 export interface SubjectAssignment {
   key: string;
@@ -145,6 +146,29 @@ export interface AnotacaoAulaEntity extends BaseEntity {
   aulaId: EntityId;
   dataReferencia: ISODateString;
   conteudoHtml: string;
+}
+
+export interface AtaEntity extends BaseEntity {
+  titulo: string;
+  conteudoHtml: string;
+  criadoPorUserId: EntityId;
+  criadoPorNome: string;
+  destinatarioUserIds: EntityId[];
+  participantUserIds: EntityId[];
+  contentHash: string;
+  lockedAt?: ISODateString;
+}
+
+export interface AtaAssinaturaEntity extends BaseEntity {
+  ataId: EntityId;
+  ownerProfessorId: EntityId;
+  signedByUserId: EntityId;
+  signedByName: string;
+  signedByEmail?: string;
+  signedAt: ISODateString;
+  contentHashAtSignature: string;
+  proofHash: string;
+  signatureHash: string;
 }
 
 export interface EmpresaCompeticaoEntity extends BaseEntity {

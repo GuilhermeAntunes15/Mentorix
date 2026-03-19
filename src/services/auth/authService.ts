@@ -10,6 +10,7 @@ import {
 } from 'firebase/auth';
 import { auth, provisioningAuth } from '@/services/firebase/client';
 import { usersRepository } from '@/services/repositories';
+import { sha256Text } from '@/utils/crypto';
 import type { SubjectAssignment, UserEntity, UserRole } from '@/types';
 
 function ensureAuth() {
@@ -51,6 +52,25 @@ export async function changeCurrentUserPassword(currentPassword: string, nextPas
   const credential = EmailAuthProvider.credential(currentUser.email, currentPassword);
   await reauthenticateWithCredential(currentUser, credential);
   await updatePassword(currentUser, nextPassword);
+}
+
+export async function createCurrentUserSignatureProof(password: string) {
+  const instance = ensureAuth();
+  const currentUser = instance.currentUser;
+
+  if (!currentUser?.email) {
+    throw new Error('Nao foi possivel validar a sessao atual para assinar o documento.');
+  }
+
+  const credential = EmailAuthProvider.credential(currentUser.email, password);
+  await reauthenticateWithCredential(currentUser, credential);
+  const token = await currentUser.getIdToken(true);
+
+  return {
+    authUid: currentUser.uid,
+    email: currentUser.email,
+    proofHash: await sha256Text(token)
+  };
 }
 
 export async function createManagedAccount({

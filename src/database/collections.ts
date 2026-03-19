@@ -10,6 +10,8 @@ export const COLLECTIONS = {
   aulas: 'aulas',
   agendaPessoal: 'agendaPessoal',
   anotacoesAula: 'anotacoesAula',
+  atas: 'atas',
+  assinaturasAta: 'assinaturasAta',
   empresasCompeticao: 'empresasCompeticao',
   membrosEmpresaCompeticao: 'membrosEmpresaCompeticao',
   perfisAluno: 'perfisAluno',

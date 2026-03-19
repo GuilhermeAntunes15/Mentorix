@@ -1,4 +1,4 @@
-import { CalendarDays, ClipboardCheck, GraduationCap, Layers3, LayoutDashboard, Menu, Newspaper, Repeat2, School2, Trophy, UserCircle2, UserSquare2, UsersRound, X } from 'lucide-react';
+import { CalendarDays, ClipboardCheck, FileText, GraduationCap, Layers3, LayoutDashboard, Menu, Newspaper, Repeat2, School2, Trophy, UserCircle2, UserSquare2, UsersRound, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { NavLink, Outlet, useLocation, useNavigation } from 'react-router-dom';
 import { AppLoadingScreen } from '@/components/feedback/AppLoadingScreen';
@@ -36,6 +36,7 @@ export function AppShell() {
             { label: 'Chamada rapida', to: '/chamada', icon: ClipboardCheck },
             { label: 'Competicao', to: '/competicao', icon: Trophy },
             { label: 'Avaliacoes', to: '/avaliacoes', icon: UserSquare2 },
+            { label: 'ATAs', to: '/atas', icon: FileText },
             { label: 'Reposicoes', to: '/reposicoes', icon: Repeat2 },
             { label: 'Mural', to: '/mural', icon: Newspaper },
             { label: 'Perfil', to: '/perfil', icon: UserCircle2 }

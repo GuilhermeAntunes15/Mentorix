@@ -1,3 +1,4 @@
+import { Download } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { Badge } from '@/components/common/Badge';
@@ -12,6 +13,7 @@ import { LoadingState } from '@/components/feedback/LoadingState';
 import { useProfessor, useStudentDetails } from '@/hooks';
 import { studentProfilesRepository } from '@/services/repositories';
 import { calculateAttendancePercentage, summarizeMakeups } from '@/utils/metrics';
+import { openStudentReportPrintWindow } from '@/utils/studentReport';
 
 export function StudentDetailsScreen() {
   const { professorId } = useProfessor();
@@ -58,6 +60,25 @@ export function StudentDetailsScreen() {
     });
   }
 
+  function handleGenerateReport() {
+    if (!data) {
+      return;
+    }
+
+    try {
+      openStudentReportPrintWindow({
+        alunoNome: data.aluno.nome,
+        profileText,
+        data,
+        metrics,
+        attendanceBySubject,
+        makeupSummary
+      });
+    } catch (cause) {
+      window.alert(cause instanceof Error ? cause.message : 'Nao foi possivel gerar o relatorio.');
+    }
+  }
+
   if (loading) {
     return <LoadingState label="Carregando painel do aluno..." />;
   }
@@ -76,7 +97,14 @@ export function StudentDetailsScreen() {
         eyebrow="Detalhes do aluno"
         title={data.aluno.nome}
         description="Painel individual com perfil livre, frequencia por materia, quizzes, atividades e reposicoes para uma leitura pedagogica completa."
-        actions={<Badge tone="info">{data.turmas.length} turmas</Badge>}
+        actions={
+          <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+            <Badge tone="info">{data.turmas.length} turmas</Badge>
+            <Button variant="secondary" onClick={handleGenerateReport}>
+              <Download size={16} /> Gerar relatorio
+            </Button>
+          </div>
+        }
       />
 
       <div className="responsive-grid">

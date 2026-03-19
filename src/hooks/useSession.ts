@@ -1,7 +1,7 @@
 import { useAuth } from '@/contexts/AuthContext';
 
 export function useSession() {
-  const { session, loading, refreshProfile, updateProfile, createManagedUser, login, logout, changePassword } = useAuth();
+  const { session, loading, refreshProfile, updateProfile, createManagedUser, login, logout, changePassword, createSignatureProof } = useAuth();
 
   return {
     session,
@@ -11,6 +11,7 @@ export function useSession() {
     createManagedUser,
     login,
     logout,
-    changePassword
+    changePassword,
+    createSignatureProof
   };
 }

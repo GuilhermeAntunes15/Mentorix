@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { AppLoadingScreen } from '@/components/feedback/AppLoadingScreen';
-import { changeCurrentUserPassword, loginWithEmail, logout, subscribeToAuthState } from '@/services/auth/authService';
+import { changeCurrentUserPassword, createCurrentUserSignatureProof, loginWithEmail, logout, subscribeToAuthState } from '@/services/auth/authService';
 import { provisionProfessorAccount, provisionStudentAccount } from '@/services/admin/adminProvisioningService';
 import { usersRepository } from '@/services/repositories';
 import type { AppSession, ManagedUserProvisionInput, UserEntity } from '@/types';
@@ -11,6 +11,7 @@ interface AuthContextValue {
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   changePassword: (currentPassword: string, nextPassword: string) => Promise<void>;
+  createSignatureProof: (password: string) => Promise<{ authUid: string; email: string | null; proofHash: string }>;
   createManagedUser: (payload: ManagedUserProvisionInput) => Promise<void>;
   refreshProfile: () => Promise<void>;
   updateProfile: (patch: Partial<Omit<UserEntity, 'id' | 'createdAt' | 'updatedAt'>>) => Promise<void>;
@@ -65,6 +66,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       login: loginWithEmail,
       logout,
       changePassword: changeCurrentUserPassword,
+      createSignatureProof: createCurrentUserSignatureProof,
       createManagedUser: async (payload) => {
         if (payload.role === 'professor') {
           await provisionProfessorAccount(payload);

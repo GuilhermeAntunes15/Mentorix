@@ -1,4 +1,5 @@
 export * from '@/services/repositories/activitiesRepository';
+export * from '@/services/repositories/atasRepository';
 export * from '@/services/repositories/attendanceRepository';
 export * from '@/services/repositories/classesRepository';
 export * from '@/services/repositories/competitionRepository';

@@ -34,11 +34,13 @@ function placeCursorAfterNode(node: Node) {
 export function RichTextEditor({
   value,
   onChange,
-  placeholder = 'Escreva suas anotacoes aqui...'
+  placeholder = 'Escreva suas anotacoes aqui...',
+  readOnly = false
 }: {
   value: string;
   onChange: (value: string) => void;
   placeholder?: string;
+  readOnly?: boolean;
 }) {
   const editorRef = useRef<HTMLDivElement | null>(null);
 
@@ -109,60 +111,62 @@ export function RichTextEditor({
 
   return (
     <div className="rich-editor-shell">
-      <div className="rich-editor-toolbar">
-        <button type="button" className="rich-editor-tool" onClick={() => formatBlock('h1')} aria-label="Titulo">
-          <Heading1 size={18} />
-        </button>
-        <button type="button" className="rich-editor-tool" onClick={() => formatBlock('h2')} aria-label="Subtitulo">
-          <Heading2 size={18} />
-        </button>
-        <button type="button" className="rich-editor-tool" onClick={() => formatBlock('p')} aria-label="Texto normal">
-          <Pilcrow size={18} />
-        </button>
-        <button type="button" className="rich-editor-tool" onClick={() => runCommand('bold')} aria-label="Negrito">
-          <Bold size={18} />
-        </button>
-        <button type="button" className="rich-editor-tool" onClick={() => runCommand('italic')} aria-label="Italico">
-          <Italic size={18} />
-        </button>
-        <button type="button" className="rich-editor-tool" onClick={() => runCommand('underline')} aria-label="Sublinhado">
-          <Underline size={18} />
-        </button>
-        <button type="button" className="rich-editor-tool" onClick={() => runCommand('strikeThrough')} aria-label="Riscado">
-          <Strikethrough size={18} />
-        </button>
-        <button type="button" className="rich-editor-tool" onClick={() => runCommand('insertUnorderedList')} aria-label="Lista">
-          <List size={18} />
-        </button>
-        <button type="button" className="rich-editor-tool" onClick={() => runCommand('insertOrderedList')} aria-label="Lista numerada">
-          <ListOrdered size={18} />
-        </button>
-        <button type="button" className="rich-editor-tool" onClick={() => runCommand('removeFormat')} aria-label="Limpar formatacao">
-          <Eraser size={18} />
-        </button>
+      {!readOnly && (
+        <div className="rich-editor-toolbar">
+          <button type="button" className="rich-editor-tool" onClick={() => formatBlock('h1')} aria-label="Titulo">
+            <Heading1 size={18} />
+          </button>
+          <button type="button" className="rich-editor-tool" onClick={() => formatBlock('h2')} aria-label="Subtitulo">
+            <Heading2 size={18} />
+          </button>
+          <button type="button" className="rich-editor-tool" onClick={() => formatBlock('p')} aria-label="Texto normal">
+            <Pilcrow size={18} />
+          </button>
+          <button type="button" className="rich-editor-tool" onClick={() => runCommand('bold')} aria-label="Negrito">
+            <Bold size={18} />
+          </button>
+          <button type="button" className="rich-editor-tool" onClick={() => runCommand('italic')} aria-label="Italico">
+            <Italic size={18} />
+          </button>
+          <button type="button" className="rich-editor-tool" onClick={() => runCommand('underline')} aria-label="Sublinhado">
+            <Underline size={18} />
+          </button>
+          <button type="button" className="rich-editor-tool" onClick={() => runCommand('strikeThrough')} aria-label="Riscado">
+            <Strikethrough size={18} />
+          </button>
+          <button type="button" className="rich-editor-tool" onClick={() => runCommand('insertUnorderedList')} aria-label="Lista">
+            <List size={18} />
+          </button>
+          <button type="button" className="rich-editor-tool" onClick={() => runCommand('insertOrderedList')} aria-label="Lista numerada">
+            <ListOrdered size={18} />
+          </button>
+          <button type="button" className="rich-editor-tool" onClick={() => runCommand('removeFormat')} aria-label="Limpar formatacao">
+            <Eraser size={18} />
+          </button>
 
-        <div className="rich-editor-tool-group">
-          <span className="rich-editor-tool-label">
-            <Highlighter size={16} /> Sublinhado colorido
-          </span>
-          {underlineColors.map((color) => (
-            <button
-              key={color.value}
-              type="button"
-              className="rich-editor-color"
-              style={{ background: color.value }}
-              onClick={() => applyColoredUnderline(color.value)}
-              aria-label={`Sublinhar com ${color.label.toLowerCase()}`}
-              title={`Sublinhar com ${color.label.toLowerCase()}`}
-            />
-          ))}
+          <div className="rich-editor-tool-group">
+            <span className="rich-editor-tool-label">
+              <Highlighter size={16} /> Sublinhado colorido
+            </span>
+            {underlineColors.map((color) => (
+              <button
+                key={color.value}
+                type="button"
+                className="rich-editor-color"
+                style={{ background: color.value }}
+                onClick={() => applyColoredUnderline(color.value)}
+                aria-label={`Sublinhar com ${color.label.toLowerCase()}`}
+                title={`Sublinhar com ${color.label.toLowerCase()}`}
+              />
+            ))}
+          </div>
         </div>
-      </div>
+      )}
 
       <div
         ref={editorRef}
         className="rich-editor-surface"
-        contentEditable
+        contentEditable={!readOnly}
         suppressContentEditableWarning
         data-placeholder={placeholder}
         onInput={emitChange}

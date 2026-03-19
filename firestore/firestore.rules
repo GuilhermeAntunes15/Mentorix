@@ -38,10 +38,41 @@ service cloud.firestore {
       return hasUserProfile() && data.professorId == ownerProfessorId();
     }
 
+    function isAtaParticipant(data) {
+      return isProfessor() && data.participantUserIds.hasAny([request.auth.uid]);
+    }
+
     match /users/{userId} {
       allow create: if isAuthenticated() && request.auth.uid == userId;
-      allow read, update: if isAuthenticated() && (request.auth.uid == userId || isAdmin());
+      allow read: if isAuthenticated() && (
+        request.auth.uid == userId ||
+        isAdmin() ||
+        (isProfessor() && resource.data.role == 'professor')
+      );
+      allow update: if isAuthenticated() && (request.auth.uid == userId || isAdmin());
       allow delete: if isAdmin();
+    }
+
+    match /atas/{documentId} {
+      allow read: if isAuthenticated() && (isAdmin() || isAtaParticipant(resource.data));
+      allow create: if isProfessor()
+        && request.resource.data.professorId == request.auth.uid
+        && request.resource.data.criadoPorUserId == request.auth.uid
+        && request.resource.data.participantUserIds.hasAny([request.auth.uid]);
+      allow update, delete: if isProfessor()
+        && resource.data.criadoPorUserId == request.auth.uid;
+    }
+
+    match /assinaturasAta/{documentId} {
+      allow read: if isAuthenticated() && (
+        isAdmin() ||
+        isAtaParticipant(get(/databases/$(database)/documents/atas/$(resource.data.ataId)).data)
+      );
+      allow create: if isProfessor()
+        && request.resource.data.signedByUserId == request.auth.uid
+        && request.resource.data.professorId == get(/databases/$(database)/documents/atas/$(request.resource.data.ataId)).data.professorId
+        && isAtaParticipant(get(/databases/$(database)/documents/atas/$(request.resource.data.ataId)).data);
+      allow update, delete: if false;
     }
 
     match /materiasPessoais/{documentId} {
