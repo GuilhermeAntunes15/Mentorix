@@ -9,6 +9,7 @@ const AdminUsersScreen = lazy(() => import('@/screens/admin-users/AdminUsersScre
 const AdminSubjectsScreen = lazy(() => import('@/screens/admin-subjects/AdminSubjectsScreen').then((module) => ({ default: module.AdminSubjectsScreen })));
 const ClassesScreen = lazy(() => import('@/screens/classes/ClassesScreen').then((module) => ({ default: module.ClassesScreen })));
 const CompetitionScreen = lazy(() => import('@/screens/competition/CompetitionScreen').then((module) => ({ default: module.CompetitionScreen })));
+const DashboardScreen = lazy(() => import('@/screens/dashboard/DashboardScreen').then((module) => ({ default: module.DashboardScreen })));
 const MakeupsScreen = lazy(() => import('@/screens/makeups/MakeupsScreen').then((module) => ({ default: module.MakeupsScreen })));
 const NoticeBoardScreen = lazy(() => import('@/screens/notice-board/NoticeBoardScreen').then((module) => ({ default: module.NoticeBoardScreen })));
 const AssessmentsScreen = lazy(() => import('@/screens/quizzes/QuizzesScreen').then((module) => ({ default: module.QuizzesScreen })));
@@ -34,6 +35,7 @@ export const router = createBrowserRouter([
       { path: 'usuarios', element: withSuspense(<RoleGuard allow={['admin']}><AdminUsersScreen /></RoleGuard>) },
       { path: 'admin/materias', element: withSuspense(<RoleGuard allow={['admin']}><AdminSubjectsScreen /></RoleGuard>) },
       { path: 'meu-calendario', element: withSuspense(<RoleGuard allow={['aluno']}><StudentPlannerScreen /></RoleGuard>) },
+      { path: 'dashboard', element: withSuspense(<RoleGuard allow={['professor']}><DashboardScreen /></RoleGuard>) },
       { path: 'turmas', element: withSuspense(<RoleGuard allow={['professor']}><ClassesScreen /></RoleGuard>) },
       { path: 'alunos', element: withSuspense(<RoleGuard allow={['professor']}><StudentsScreen /></RoleGuard>) },
       { path: 'alunos/:studentId', element: withSuspense(<RoleGuard allow={['professor']}><StudentDetailsScreen /></RoleGuard>) },

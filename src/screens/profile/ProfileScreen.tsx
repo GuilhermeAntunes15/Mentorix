@@ -6,24 +6,23 @@ import { Card } from '@/components/common/Card';
 import { Input } from '@/components/common/Input';
 import { PageHeader } from '@/components/common/PageHeader';
 import { StatCard } from '@/components/common/StatCard';
-import { TextArea } from '@/components/common/TextArea';
 import { EmptyState } from '@/components/feedback/EmptyState';
 import { ErrorState } from '@/components/feedback/ErrorState';
 import { LoadingState } from '@/components/feedback/LoadingState';
 import { useProfessor, useSession, useStudentDetails } from '@/hooks';
 import { getAuthErrorMessage } from '@/services/auth/authErrorMessages';
-import { studentProfilesRepository } from '@/services/repositories';
 import { avatarOptions, getAvatarOption } from '@/utils/avatars';
 import { calculateAttendancePercentage, summarizeMakeups } from '@/utils/metrics';
 
 export function ProfileScreen() {
   const { session, updateProfile, logout, changePassword } = useSession();
   const { professorId } = useProfessor();
-  const { data, loading, error, metrics } = useStudentDetails(professorId, session?.alunoId);
+  const { data, loading, error, metrics } = useStudentDetails(professorId, session?.alunoId, {
+    includePrivateProfile: false
+  });
   const [username, setUsername] = useState(session?.profile.username ?? '');
   const [avatarKey, setAvatarKey] = useState(session?.profile.avatarKey ?? avatarOptions[0].key);
   const [saving, setSaving] = useState(false);
-  const [profileText, setProfileText] = useState('');
   const [passwordForm, setPasswordForm] = useState({
     currentPassword: '',
     nextPassword: '',
@@ -37,10 +36,6 @@ export function ProfileScreen() {
     setUsername(session?.profile.username ?? '');
     setAvatarKey(session?.profile.avatarKey ?? avatarOptions[0].key);
   }, [session?.profile.avatarKey, session?.profile.username]);
-
-  useEffect(() => {
-    setProfileText(data?.perfil?.perfilTexto ?? '');
-  }, [data?.perfil?.perfilTexto]);
 
   const attendanceBySubject = useMemo(() => {
     if (!data) {
@@ -72,22 +67,6 @@ export function ProfileScreen() {
     } finally {
       setSaving(false);
     }
-  }
-
-  async function handleSaveProfileText() {
-    if (!session?.alunoId) {
-      return;
-    }
-
-    if (data?.perfil) {
-      await studentProfilesRepository.update(data.perfil.id, { perfilTexto: profileText });
-      return;
-    }
-
-    await studentProfilesRepository.create(professorId, {
-      alunoId: session.alunoId,
-      perfilTexto: profileText
-    });
   }
 
   async function handleChangePassword() {
@@ -260,11 +239,6 @@ export function ProfileScreen() {
       {!loading && !error && data && (
         <>
           <div className="responsive-grid" style={{ alignItems: 'start' }}>
-            <Card title="Seu perfil" subtitle="Texto livre para acompanhar seu desenvolvimento.">
-              <TextArea label="Perfil" value={profileText} onChange={(event) => setProfileText(event.target.value)} />
-              <Button onClick={() => void handleSaveProfileText()}>Salvar texto do perfil</Button>
-            </Card>
-
             <Card title="Atividades e reposicoes" subtitle="Consolidado da sua trilha pessoal.">
               <div style={{ display: 'grid', gap: '0.55rem' }}>
                 <span>Total esperado: {metrics.totalAtividadesEsperadas}</span>
@@ -273,6 +247,13 @@ export function ProfileScreen() {
                 <span>Reposicoes passadas: {makeupSummary.passadas}</span>
                 <span>Reposicoes pendentes: {makeupSummary.pendentes}</span>
                 <span>Reposicoes entregues: {makeupSummary.entregues}</span>
+              </div>
+            </Card>
+
+            <Card title="Leitura da sua rotina" subtitle="Seu perfil mostra apenas informacoes academicas e dados da conta.">
+              <div style={{ display: 'grid', gap: '0.55rem', color: '#cbd5e1' }}>
+                <span>Nome de usuario atual: {session.username}</span>
+                <span>Avatar selecionado: {avatar.label}</span>
               </div>
             </Card>
           </div>

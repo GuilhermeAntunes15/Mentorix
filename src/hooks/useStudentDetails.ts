@@ -17,10 +17,15 @@ import {
 import { calculateStudentMetrics } from '@/utils/metrics';
 import type { StudentDetailBundle } from '@/types';
 
-export function useStudentDetails(professorId: string, studentId: string | undefined) {
+export function useStudentDetails(
+  professorId: string,
+  studentId: string | undefined,
+  options?: { includePrivateProfile?: boolean }
+) {
   const [data, setData] = useState<StudentDetailBundle | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const includePrivateProfile = options?.includePrivateProfile ?? true;
 
   useEffect(() => {
     async function load() {
@@ -49,7 +54,9 @@ export function useStudentDetails(professorId: string, studentId: string | undef
           reposicoesCatalogo
         ] = await Promise.all([
           studentsRepository.getById(studentId),
-          studentProfilesRepository.getByStudent(professorId, studentId),
+          includePrivateProfile
+            ? studentProfilesRepository.getByStudent(professorId, studentId)
+            : Promise.resolve(null),
           lessonsRepository.listByProfessor(professorId),
           attendanceRepository.listByProfessor(professorId),
           frequencyRepository.listByStudent(professorId, studentId),
@@ -100,7 +107,7 @@ export function useStudentDetails(professorId: string, studentId: string | undef
     }
 
     void load();
-  }, [professorId, studentId]);
+  }, [includePrivateProfile, professorId, studentId]);
 
   const metrics = useMemo(
     () => calculateStudentMetrics(data?.quizzes ?? [], data?.atividades ?? []),

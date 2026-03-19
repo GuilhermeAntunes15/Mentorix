@@ -4,3 +4,4 @@ export * from '@/hooks/useProfessor';
 export * from '@/hooks/useQuickAttendance';
 export * from '@/hooks/useSession';
 export * from '@/hooks/useStudentDetails';
+export * from '@/hooks/useTeacherDashboard';

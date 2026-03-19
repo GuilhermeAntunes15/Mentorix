@@ -1,5 +1,6 @@
 export const routes = {
   calendar: '/',
+  dashboard: '/dashboard',
   profile: '/perfil',
   noticeBoard: '/mural',
   users: '/usuarios',

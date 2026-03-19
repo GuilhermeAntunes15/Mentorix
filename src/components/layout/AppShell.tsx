@@ -28,6 +28,7 @@ export function AppShell() {
             { label: 'Perfil', to: '/perfil', icon: UserCircle2 }
           ]
         : [
+            { label: 'Dashboard', to: '/dashboard', icon: LayoutDashboard },
             { label: 'Calendario', to: '/', icon: CalendarDays },
             { label: 'Turmas', to: '/turmas', icon: School2 },
             { label: 'Alunos', to: '/alunos', icon: GraduationCap },

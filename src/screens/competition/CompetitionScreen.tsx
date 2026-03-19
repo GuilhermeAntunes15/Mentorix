@@ -1,5 +1,5 @@
-import { Crown, Pencil, Plus, Sparkles, Trash2, Trophy, Users } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
+import { Crown, Medal, Pencil, Plus, Shield, Sparkles, Target, Trash2, Trophy, Users, Zap } from 'lucide-react';
+import { type CSSProperties, useEffect, useMemo, useState } from 'react';
 import { Badge } from '@/components/common/Badge';
 import { Button } from '@/components/common/Button';
 import { Card } from '@/components/common/Card';
@@ -147,6 +147,15 @@ export function CompetitionScreen() {
       studentsInClass
     ]
   );
+  const viewerStanding = useMemo(() => {
+    if (session?.alunoId) {
+      return standings.find((standing) => standing.alunos.some((student) => student.id === session.alunoId)) ?? null;
+    }
+
+    return standings[0] ?? null;
+  }, [session?.alunoId, standings]);
+  const podiumStandings = standings.slice(0, 3);
+  const leagueStandings = standings.slice(3);
 
   const selectedStanding = standings.find((standing) => standing.empresa.id === selectedCompanyId) ?? null;
   const assignedStudentIds = useMemo(
@@ -367,28 +376,178 @@ export function CompetitionScreen() {
       )}
 
       {!loading && !error && selectedClassId && mode === 'aluno' && !!standings.length && (
-        <section style={{ display: 'grid', gap: '1rem' }}>
-          {standings.map((standing, index) => (
-            <Card
-              key={standing.empresa.id}
-              style={{
-                background: `linear-gradient(135deg, ${standing.empresa.cor}2A 0%, rgba(11, 16, 32, 0.9) 62%, rgba(11, 16, 32, 0.74) 100%)`,
-                border: `1px solid ${standing.empresa.cor}44`
-              }}
-              title={`${index + 1}o • ${standing.empresa.nome}`}
-              subtitle={standing.lider ? `Lider: ${standing.lider.nome}` : 'Sem lider definido'}
-              actions={<Badge tone={index === 0 ? 'warning' : 'info'}>{standing.pontuacao.total} pts</Badge>}
-            >
-              <div style={{ display: 'grid', gap: '0.55rem', color: '#cbd5e1' }}>
-                <span>Atividades da equipe: {standing.pontuacao.atividadesEquipe}/10</span>
-                <span>Media das atividades: {standing.pontuacao.mediaAtividades}/10</span>
-                <span>Quizzes feitos: {standing.pontuacao.quizzesFeitos}/10</span>
-                <span>Quizzes corretos: {standing.pontuacao.quizzesCorretos}/15</span>
-                <span>Comportamento: {standing.pontuacao.comportamento} pts</span>
-                <span>Extras: {standing.pontuacao.extras} pts</span>
+        <section className="competition-student-shell">
+          <Card
+            className="competition-hero-card"
+            style={{
+              background: `linear-gradient(140deg, ${viewerStanding?.empresa.cor ?? '#7dd3fc'}35 0%, rgba(11, 16, 32, 0.96) 52%, rgba(8, 15, 31, 0.92) 100%)`,
+              border: `1px solid ${viewerStanding?.empresa.cor ?? '#7dd3fc'}55`
+            }}
+            title={viewerStanding ? `Sua torcida: ${viewerStanding.empresa.nome}` : 'Arena da competicao'}
+            subtitle={
+              viewerStanding
+                ? `Acompanhe a disputa da ${selectedClass?.nome ?? 'turma'} e veja em quais frentes sua equipe pode crescer.`
+                : 'Veja quem lidera a temporada e quais equipes estao dominando a turma.'
+            }
+            actions={<Badge tone="warning"><Trophy size={14} /> {viewerStanding?.pontuacao.total ?? 0} pts</Badge>}
+          >
+            <div className="competition-hero-grid">
+              <div className="competition-hero-highlight">
+                <span className="competition-kicker">Posicao atual</span>
+                <strong>
+                  {viewerStanding ? `${standings.findIndex((item) => item.empresa.id === viewerStanding.empresa.id) + 1}o lugar` : 'Ranking em aberto'}
+                </strong>
+                <p>
+                  {viewerStanding?.lider
+                    ? `Lideranca de ${viewerStanding.lider.nome}.`
+                    : 'A equipe ainda nao definiu um lider em destaque.'}
+                </p>
+              </div>
+
+              <div className="competition-hero-metrics">
+                <div className="competition-hero-stat">
+                  <Target size={18} />
+                  <div>
+                    <strong>{viewerStanding?.pontuacao.quizzesCorretos ?? 0}/15</strong>
+                    <span>Quizzes corretos</span>
+                  </div>
+                </div>
+                <div className="competition-hero-stat">
+                  <Shield size={18} />
+                  <div>
+                    <strong>{viewerStanding?.pontuacao.comportamento ?? 0} pts</strong>
+                    <span>Comportamento</span>
+                  </div>
+                </div>
+                <div className="competition-hero-stat">
+                  <Zap size={18} />
+                  <div>
+                    <strong>{viewerStanding?.pontuacao.extras ?? 0} pts</strong>
+                    <span>Pontos extras</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </Card>
+
+          <Card title="Podium da turma" subtitle="Quem esta brilhando mais forte nesta rodada da competicao.">
+            <div className="competition-podium">
+              {podiumStandings.map((standing, index) => {
+                const rank = index + 1;
+                const positionClass = rank === 1 ? 'first' : rank === 2 ? 'second' : 'third';
+
+                return (
+                  <article
+                    key={standing.empresa.id}
+                    className={`competition-podium-card ${positionClass}`}
+                    style={{ '--company-color': standing.empresa.cor } as CSSProperties}
+                  >
+                    <div className="competition-podium-badge">
+                      {rank === 1 ? <Trophy size={18} /> : <Medal size={18} />}
+                      <span>{rank}o lugar</span>
+                    </div>
+                    <strong>{standing.empresa.nome}</strong>
+                    <span>{standing.pontuacao.total} pts</span>
+                    <small>{standing.lider ? `Lider: ${standing.lider.nome}` : 'Sem lider definido'}</small>
+                  </article>
+                );
+              })}
+            </div>
+          </Card>
+
+          <div className="competition-student-grid">
+            {standings.map((standing, index) => (
+              <article
+                key={standing.empresa.id}
+                className={`competition-student-card${viewerStanding?.empresa.id === standing.empresa.id ? ' own-team' : ''}`}
+                style={{ '--company-color': standing.empresa.cor } as CSSProperties}
+              >
+                <header className="competition-student-card-header">
+                  <div>
+                    <span className="competition-kicker">#{index + 1} no ranking</span>
+                    <h3>{standing.empresa.nome}</h3>
+                    <p>{standing.lider ? `Lider: ${standing.lider.nome}` : 'Equipe sem lider definido'}</p>
+                  </div>
+                  <Badge tone={index === 0 ? 'warning' : viewerStanding?.empresa.id === standing.empresa.id ? 'success' : 'info'}>
+                    {standing.pontuacao.total} pts
+                  </Badge>
+                </header>
+
+                <div className="competition-points-grid">
+                  <div className="competition-point-chip">
+                    <span>Atividades</span>
+                    <strong>{standing.pontuacao.atividadesEquipe}/10</strong>
+                  </div>
+                  <div className="competition-point-chip">
+                    <span>Media</span>
+                    <strong>{standing.pontuacao.mediaAtividades}/10</strong>
+                  </div>
+                  <div className="competition-point-chip">
+                    <span>Quizzes feitos</span>
+                    <strong>{standing.pontuacao.quizzesFeitos}/10</strong>
+                  </div>
+                  <div className="competition-point-chip">
+                    <span>Quizzes corretos</span>
+                    <strong>{standing.pontuacao.quizzesCorretos}/15</strong>
+                  </div>
+                  <div className="competition-point-chip">
+                    <span>Comportamento</span>
+                    <strong>{standing.pontuacao.comportamento}</strong>
+                  </div>
+                  <div className="competition-point-chip">
+                    <span>Extras</span>
+                    <strong>{standing.pontuacao.extras}</strong>
+                  </div>
+                </div>
+
+                <div className="competition-progress-stack">
+                  <div>
+                    <span>Entrega das atividades</span>
+                    <div className="competition-progress-bar">
+                      <div style={{ width: `${standing.pontuacao.taxaAtividadesEquipe * 100}%` }} />
+                    </div>
+                  </div>
+                  <div>
+                    <span>Participacao nos quizzes</span>
+                    <div className="competition-progress-bar">
+                      <div style={{ width: `${standing.pontuacao.taxaQuizzesFeitos * 100}%` }} />
+                    </div>
+                  </div>
+                  <div>
+                    <span>Quizzes corretos</span>
+                    <div className="competition-progress-bar">
+                      <div style={{ width: `${standing.pontuacao.taxaQuizzesCorretos * 100}%` }} />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="competition-member-list">
+                  {standing.alunos.map((student) => (
+                    <span key={student.id} className={`competition-member-tag${standing.empresa.liderAlunoId === student.id ? ' leader' : ''}`}>
+                      {standing.empresa.liderAlunoId === student.id ? <Crown size={13} /> : <Users size={13} />}
+                      {student.nome}
+                    </span>
+                  ))}
+                </div>
+              </article>
+            ))}
+          </div>
+
+          {!!leagueStandings.length && (
+            <Card title="Pelotao da competicao" subtitle="As equipes seguintes tambem estao na corrida e podem virar o jogo.">
+              <div className="competition-league-list">
+                {leagueStandings.map((standing, index) => (
+                  <div key={standing.empresa.id} className="competition-league-row">
+                    <div>
+                      <strong>{index + 4}o. {standing.empresa.nome}</strong>
+                      <p>{standing.alunos.length} integrante(s)</p>
+                    </div>
+                    <Badge tone="neutral">{standing.pontuacao.total} pts</Badge>
+                  </div>
+                ))}
               </div>
             </Card>
-          ))}
+          )}
         </section>
       )}
 
