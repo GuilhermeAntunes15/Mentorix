@@ -5,7 +5,7 @@ export const routes = {
   profile: '/perfil',
   noticeBoard: '/mural',
   users: '/usuarios',
-  adminSubjects: '/admin/materias',
+  adminSubjects: '/materias',
   personalPlanner: '/meu-calendario',
   classes: '/turmas',
   students: '/alunos',

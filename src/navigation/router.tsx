@@ -19,7 +19,7 @@ const RoleHomeScreen = lazy(() => import('@/screens/home/RoleHomeScreen').then((
 const StudentDetailsScreen = lazy(() => import('@/screens/student-details/StudentDetailsScreen').then((module) => ({ default: module.StudentDetailsScreen })));
 const StudentPlannerScreen = lazy(() => import('@/screens/student-planner/StudentPlannerScreen').then((module) => ({ default: module.StudentPlannerScreen })));
 const StudentsScreen = lazy(() => import('@/screens/students/StudentsScreen').then((module) => ({ default: module.StudentsScreen })));
-const SubjectsScreen = lazy(() => import('@/screens/subjects/SubjectsScreen').then((module) => ({ default: module.SubjectsScreen })));
+const SubjectsEntryScreen = lazy(() => import('@/screens/subjects/SubjectsEntryScreen').then((module) => ({ default: module.SubjectsEntryScreen })));
 
 function withSuspense(element: React.ReactNode) {
   return <Suspense fallback={<AppLoadingScreen label="Abrindo modulo..." />}>{element}</Suspense>;
@@ -41,7 +41,7 @@ export const router = createBrowserRouter([
       { path: 'turmas', element: withSuspense(<RoleGuard allow={['professor']}><ClassesScreen /></RoleGuard>) },
       { path: 'alunos', element: withSuspense(<RoleGuard allow={['professor']}><StudentsScreen /></RoleGuard>) },
       { path: 'alunos/:studentId', element: withSuspense(<RoleGuard allow={['professor']}><StudentDetailsScreen /></RoleGuard>) },
-      { path: 'materias', element: withSuspense(<RoleGuard allow={['professor']}><SubjectsScreen /></RoleGuard>) },
+      { path: 'materias', element: withSuspense(<RoleGuard allow={['admin', 'professor']}><SubjectsEntryScreen /></RoleGuard>) },
       { path: 'chamada', element: withSuspense(<RoleGuard allow={['professor']}><AttendanceScreen /></RoleGuard>) },
       { path: 'competicao', element: withSuspense(<RoleGuard allow={['professor', 'aluno']}><CompetitionScreen /></RoleGuard>) },
       { path: 'avaliacoes', element: withSuspense(<RoleGuard allow={['professor']}><AssessmentsScreen /></RoleGuard>) },

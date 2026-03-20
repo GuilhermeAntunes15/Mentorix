@@ -27,6 +27,7 @@ export function AppShell() {
       ? [
           { label: 'Painel', to: '/', icon: LayoutDashboard },
           { label: 'Usuarios', to: '/usuarios', icon: UsersRound },
+          { label: 'Materias', to: '/materias', icon: FileText },
           { label: 'Mural', to: '/mural', icon: Newspaper },
           { label: 'Perfil', to: '/perfil', icon: UserCircle2 }
         ]

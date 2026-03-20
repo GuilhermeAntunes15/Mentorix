@@ -1,4 +1,4 @@
-import { GraduationCap, Pencil, Plus, Shield, UserSquare2 } from 'lucide-react';
+import { GraduationCap, Pencil, Plus, Shield, UserSquare2, UsersRound } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { Badge } from '@/components/common/Badge';
 import { Button } from '@/components/common/Button';
@@ -65,6 +65,14 @@ export function AdminUsersScreen() {
 
   const professors = useMemo(
     () => users.filter((user) => user.role === 'professor').sort((a, b) => a.displayName.localeCompare(b.displayName)),
+    [users]
+  );
+  const admins = useMemo(
+    () => users.filter((user) => user.role === 'admin').sort((a, b) => a.displayName.localeCompare(b.displayName)),
+    [users]
+  );
+  const students = useMemo(
+    () => users.filter((user) => user.role === 'aluno').sort((a, b) => a.displayName.localeCompare(b.displayName)),
     [users]
   );
 
@@ -202,6 +210,82 @@ export function AdminUsersScreen() {
     form.email.trim() &&
     form.password.trim();
 
+  function renderUserSection(
+    title: string,
+    subtitle: string,
+    list: UserEntity[],
+    tone: 'warning' | 'info' | 'success'
+  ) {
+    if (!list.length) {
+      return (
+        <Card title={title} subtitle={subtitle}>
+          <EmptyState title={`Nenhum ${title.toLowerCase()} encontrado`} description="Quando houver cadastros nesta categoria, eles aparecerao aqui." />
+        </Card>
+      );
+    }
+
+    return (
+      <section style={{ display: 'grid', gap: '1rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap' }}>
+          <div>
+            <h3 style={{ margin: 0, fontSize: '1.25rem' }}>{title}</h3>
+            <p style={{ margin: '0.35rem 0 0', color: '#94a3b8' }}>{subtitle}</p>
+          </div>
+          <Badge tone={tone}>
+            <UsersRound size={14} /> {list.length}
+          </Badge>
+        </div>
+
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+            gap: '1rem'
+          }}
+        >
+          {list.map((user) => (
+            <Card
+              key={user.id}
+              title={user.displayName}
+              subtitle={user.email}
+              actions={<Badge tone={tone}>{user.role}</Badge>}
+            >
+              <div style={{ display: 'grid', gap: '0.7rem', minWidth: 0 }}>
+                <div style={{ display: 'grid', gap: '0.2rem', minWidth: 0 }}>
+                  <span style={{ color: '#94a3b8', fontSize: '0.86rem' }}>Username</span>
+                  <strong style={{ overflowWrap: 'anywhere' }}>{user.username || user.displayName}</strong>
+                </div>
+
+                {user.role === 'admin' && (
+                  <p style={{ margin: 0, color: '#cbd5e1' }}>
+                    Conta principal de administracao, com acesso total ao painel, mural, usuarios e materias.
+                  </p>
+                )}
+
+                {user.role === 'professor' && (
+                  <>
+                    <p style={{ margin: 0, color: '#cbd5e1' }}>
+                      Materias e turmas ficam organizadas na tela `Materias` do admin, sempre vinculadas a uma turma.
+                    </p>
+                    <Button variant="secondary" onClick={() => openProfessorEditor(user)}>
+                      <Pencil size={16} /> Editar professor
+                    </Button>
+                  </>
+                )}
+
+                {user.role === 'aluno' && (
+                  <p style={{ margin: 0, color: '#cbd5e1' }}>
+                    Conta de aluno vinculada pelo admin. A turma e sincronizada automaticamente e nao pode ser alterada aqui.
+                  </p>
+                )}
+              </div>
+            </Card>
+          ))}
+        </div>
+      </section>
+    );
+  }
+
   return (
     <>
       <PageHeader
@@ -221,36 +305,13 @@ export function AdminUsersScreen() {
         <EmptyState title="Nenhum usuario encontrado" description="Crie o primeiro professor ou aluno a partir desta area." />
       )}
 
-      <section className="responsive-grid">
-        {users.map((user) => (
-          <Card
-            key={user.id}
-            title={user.displayName}
-            subtitle={user.email}
-            actions={
-              <Badge tone={user.role === 'admin' ? 'warning' : user.role === 'professor' ? 'info' : 'success'}>
-                {user.role}
-              </Badge>
-            }
-          >
-            <div style={{ display: 'grid', gap: '0.45rem', color: '#cbd5e1' }}>
-              <span>Username: {user.username || user.displayName}</span>
-              {user.role === 'professor' && (
-                <span>Materias: gerenciadas na tela "Materias" do admin, sempre vinculadas a uma turma.</span>
-              )}
-              {user.linkedStudentId && <span>Aluno vinculado: {user.linkedStudentId}</span>}
-              <span>Professor dono: {user.targetProfessorId ?? user.professorId}</span>
-            </div>
-            {user.role === 'professor' && (
-              <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
-                <Button variant="secondary" onClick={() => openProfessorEditor(user)}>
-                  <Pencil size={16} /> Editar professor
-                </Button>
-              </div>
-            )}
-          </Card>
-        ))}
-      </section>
+      {!loading && !!users.length && (
+        <section style={{ display: 'grid', gap: '1.5rem' }}>
+          {renderUserSection('Admins', 'Controle total da plataforma e dos cadastros globais.', admins, 'warning')}
+          {renderUserSection('Professores', 'Contas docentes com materias organizadas na tela Materias.', professors, 'info')}
+          {renderUserSection('Alunos', 'Acessos vinculados a turmas definidas pelo admin.', students, 'success')}
+        </section>
+      )}
 
       <Modal open={createModalOpen} onClose={() => setCreateModalOpen(false)} title="Criar novo acesso">
         <form onSubmit={handleSubmit} style={{ display: 'grid', gap: '1rem', marginTop: '1rem' }}>
