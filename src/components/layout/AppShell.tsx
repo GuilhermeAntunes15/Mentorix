@@ -1,4 +1,4 @@
-import { CalendarDays, ClipboardCheck, FileText, GraduationCap, Layers3, LayoutDashboard, Menu, Newspaper, Repeat2, School2, Trophy, UserCircle2, UserSquare2, UsersRound, X } from 'lucide-react';
+import { CalendarDays, FileText, GraduationCap, LayoutDashboard, Menu, Newspaper, Repeat2, Trophy, UserCircle2, UserSquare2, UsersRound, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { NavLink, Outlet, useLocation, useNavigation } from 'react-router-dom';
 import { AppLoadingScreen } from '@/components/feedback/AppLoadingScreen';
@@ -27,7 +27,6 @@ export function AppShell() {
       ? [
           { label: 'Painel', to: '/', icon: LayoutDashboard },
           { label: 'Usuarios', to: '/usuarios', icon: UsersRound },
-          { label: 'Materias', to: '/admin/materias', icon: Layers3 },
           { label: 'Mural', to: '/mural', icon: Newspaper },
           { label: 'Perfil', to: '/perfil', icon: UserCircle2 }
         ]
@@ -41,10 +40,7 @@ export function AppShell() {
         : [
             { label: 'Dashboard', to: '/dashboard', icon: LayoutDashboard },
             { label: 'Calendario', to: '/', icon: CalendarDays },
-            { label: 'Turmas', to: '/turmas', icon: School2 },
             { label: 'Alunos', to: '/alunos', icon: GraduationCap },
-            { label: 'Materias', to: '/materias', icon: Layers3 },
-            { label: 'Chamada rapida', to: '/chamada', icon: ClipboardCheck },
             { label: 'Competicao', to: '/competicao', icon: Trophy },
             { label: 'Avaliacoes', to: '/avaliacoes', icon: UserSquare2 },
             { label: 'ATAs', to: '/atas', icon: FileText },
