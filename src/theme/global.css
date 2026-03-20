@@ -1,13 +1,55 @@
 :root {
   color-scheme: dark;
-  font-family: "Segoe UI", "Helvetica Neue", sans-serif;
+  font-family: "Space Grotesk", "Avenir Next", "Segoe UI", "Helvetica Neue", sans-serif;
   line-height: 1.5;
   font-weight: 400;
+  --bg-base: #060912;
+  --bg-depth: #0b1220;
+  --bg-elevated: #101a2e;
+  --surface: rgba(10, 16, 30, 0.66);
+  --surface-strong: rgba(12, 20, 36, 0.84);
+  --line-soft: rgba(173, 188, 213, 0.14);
+  --line-strong: rgba(173, 188, 213, 0.22);
+  --text-primary: #edf2ff;
+  --text-secondary: #a0aec8;
+  --brand-primary: #63f2de;
+  --brand-secondary: #ffd174;
+  --brand-tertiary: #ff7f63;
+  --brand-gradient: linear-gradient(128deg, var(--brand-primary) 0%, var(--brand-secondary) 56%, var(--brand-tertiary) 100%);
+  --panel-shadow: 0 18px 80px rgba(2, 8, 20, 0.42);
+  --nav-active-bg: rgba(99, 242, 222, 0.14);
+  --nav-active-border: rgba(99, 242, 222, 0.32);
+  --mobile-nav-bg: rgba(15, 24, 42, 0.62);
+  --mobile-nav-border: rgba(173, 188, 213, 0.18);
+  --mobile-nav-active-bg: rgba(255, 209, 116, 0.16);
+  --mobile-nav-active-border: rgba(255, 209, 116, 0.34);
   background:
-    radial-gradient(circle at top left, rgba(34, 211, 238, 0.18), transparent 24%),
-    radial-gradient(circle at bottom right, rgba(52, 211, 153, 0.16), transparent 25%),
-    linear-gradient(180deg, #08111f 0%, #0d1727 100%);
-  color: #e2e8f0;
+    radial-gradient(circle at 16% 8%, rgba(99, 242, 222, 0.2), transparent 28%),
+    radial-gradient(circle at 84% 18%, rgba(255, 209, 116, 0.17), transparent 28%),
+    linear-gradient(170deg, var(--bg-base) 0%, var(--bg-depth) 52%, var(--bg-elevated) 100%);
+  color: var(--text-primary);
+}
+
+html.wpa-mode {
+  --bg-base: #04070d;
+  --bg-depth: #0b111d;
+  --bg-elevated: #0f1629;
+  --surface: rgba(7, 12, 24, 0.82);
+  --surface-strong: rgba(9, 15, 28, 0.94);
+  --line-soft: rgba(181, 198, 228, 0.22);
+  --line-strong: rgba(181, 198, 228, 0.36);
+  --text-primary: #f4f7ff;
+  --text-secondary: #b1bdd8;
+  --brand-primary: #77f0ff;
+  --brand-secondary: #ffd772;
+  --brand-tertiary: #ff8b69;
+  --nav-active-bg: rgba(119, 240, 255, 0.17);
+  --nav-active-border: rgba(119, 240, 255, 0.38);
+  --mobile-nav-bg: rgba(11, 17, 30, 0.8);
+  --mobile-nav-border: rgba(181, 198, 228, 0.24);
+  --mobile-nav-active-bg: rgba(255, 215, 114, 0.18);
+  --mobile-nav-active-border: rgba(255, 215, 114, 0.36);
+  --panel-shadow: 0 26px 84px rgba(1, 6, 18, 0.56);
 }
 
 * {
@@ -24,6 +66,32 @@ body,
 body {
   min-height: 100vh;
   overflow-x: hidden;
+  position: relative;
+  color: var(--text-primary);
+}
+
+body::before,
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: -1;
+}
+
+body::before {
+  opacity: 0.42;
+  background-image:
+    linear-gradient(rgba(173, 188, 213, 0.08) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(173, 188, 213, 0.08) 1px, transparent 1px);
+  background-size: 34px 34px;
+  mask-image: radial-gradient(circle at center, black 26%, transparent 82%);
+}
+
+body::after {
+  background:
+    radial-gradient(circle at 15% 16%, rgba(99, 242, 222, 0.16), transparent 26%),
+    radial-gradient(circle at 84% 80%, rgba(255, 209, 116, 0.16), transparent 28%);
 }
 
 button,
@@ -54,23 +122,75 @@ img {
 
 .desktop-sidebar {
   padding: 1rem;
-  border-right: 1px solid rgba(148, 163, 184, 0.08);
-  background: rgba(8, 15, 31, 0.55);
+  border-right: 1px solid var(--line-soft);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--surface-strong) 70%, transparent) 0%, color-mix(in srgb, var(--surface) 85%, transparent) 100%);
   backdrop-filter: blur(24px);
 }
 
 .glass-panel {
-  background: rgba(11, 16, 32, 0.62);
-  border: 1px solid rgba(148, 163, 184, 0.12);
-  box-shadow: 0 18px 80px rgba(8, 15, 31, 0.28);
-  backdrop-filter: blur(22px);
+  background: var(--surface);
+  border: 1px solid var(--line-soft);
+  box-shadow: var(--panel-shadow);
+  backdrop-filter: blur(24px);
 }
 
 .gradient-text {
-  background: linear-gradient(135deg, #7dd3fc 0%, #34d399 100%);
+  background: var(--brand-gradient);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
+}
+
+.app-brand-block {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.app-brand-block-compact {
+  gap: 0.55rem;
+}
+
+.app-brand-glyph {
+  width: 2.25rem;
+  height: 2.25rem;
+  flex-shrink: 0;
+}
+
+.app-brand-block-compact .app-brand-glyph {
+  width: 1.7rem;
+  height: 1.7rem;
+}
+
+.app-brand-wordmark {
+  color: var(--brand-primary);
+  font-weight: 700;
+  letter-spacing: 0.11em;
+  font-size: 0.82rem;
+}
+
+.app-brand-wordmark-compact {
+  font-size: 0.72rem;
+}
+
+.app-mode-badge {
+  display: none;
+  align-items: center;
+  gap: 0.25rem;
+  margin-top: 0.28rem;
+  width: fit-content;
+  padding: 0.22rem 0.48rem;
+  border-radius: 999px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: color-mix(in srgb, var(--text-primary) 90%, var(--brand-primary));
+  border: 1px solid color-mix(in srgb, var(--brand-primary) 46%, transparent);
+  background: color-mix(in srgb, var(--brand-primary) 16%, transparent);
+}
+
+html.wpa-mode .app-mode-badge {
+  display: inline-flex;
 }
 
 .page-content {
@@ -99,9 +219,9 @@ img {
   place-items: center;
   padding: 1.5rem;
   background:
-    radial-gradient(circle at 18% 20%, rgba(125, 211, 252, 0.18), transparent 24%),
-    radial-gradient(circle at 82% 18%, rgba(52, 211, 153, 0.14), transparent 24%),
-    linear-gradient(180deg, #07101c 0%, #0b1424 100%);
+    radial-gradient(circle at 18% 20%, color-mix(in srgb, var(--brand-primary) 30%, transparent), transparent 24%),
+    radial-gradient(circle at 82% 18%, color-mix(in srgb, var(--brand-secondary) 26%, transparent), transparent 24%),
+    linear-gradient(180deg, var(--bg-base) 0%, var(--bg-depth) 100%);
 }
 
 .auth-shell {
@@ -126,14 +246,14 @@ img {
   justify-content: flex-end;
   gap: 1rem;
   background:
-    radial-gradient(circle at top left, rgba(125, 211, 252, 0.2), transparent 30%),
-    radial-gradient(circle at bottom right, rgba(52, 211, 153, 0.16), transparent 28%),
-    rgba(11, 16, 32, 0.68);
+    radial-gradient(circle at top left, color-mix(in srgb, var(--brand-primary) 32%, transparent), transparent 30%),
+    radial-gradient(circle at bottom right, color-mix(in srgb, var(--brand-secondary) 24%, transparent), transparent 28%),
+    var(--surface);
 }
 
 .auth-brand-kicker,
 .auth-login-kicker {
-  color: #7dd3fc;
+  color: var(--brand-primary);
   font-size: 0.82rem;
   font-weight: 700;
   letter-spacing: 0.14em;
@@ -149,7 +269,7 @@ img {
 .auth-brand-copy {
   margin: 0;
   max-width: 28rem;
-  color: #94a3b8;
+  color: var(--text-secondary);
   font-size: 1.05rem;
 }
 
@@ -170,7 +290,7 @@ img {
   right: 10%;
   width: 160px;
   height: 160px;
-  background: radial-gradient(circle, rgba(125, 211, 252, 0.28) 0%, rgba(125, 211, 252, 0) 72%);
+  background: radial-gradient(circle, color-mix(in srgb, var(--brand-primary) 38%, transparent) 0%, transparent 72%);
 }
 
 .auth-brand-orb-secondary {
@@ -178,7 +298,7 @@ img {
   left: 8%;
   width: 220px;
   height: 220px;
-  background: radial-gradient(circle, rgba(52, 211, 153, 0.22) 0%, rgba(52, 211, 153, 0) 70%);
+  background: radial-gradient(circle, color-mix(in srgb, var(--brand-secondary) 34%, transparent) 0%, transparent 70%);
 }
 
 .auth-login-panel {
@@ -264,7 +384,7 @@ img {
   align-items: center;
   justify-content: center;
   color: #08111f;
-  background: linear-gradient(135deg, #7dd3fc 0%, #34d399 100%);
+  background: var(--brand-gradient);
   box-shadow: 0 24px 64px rgba(8, 15, 31, 0.45);
 }
 
@@ -280,13 +400,12 @@ img {
   display: none;
   align-items: center;
   justify-content: center;
-  color: #e2e8f0;
-  background:
-    linear-gradient(180deg, rgba(15, 23, 42, 0.96) 0%, rgba(10, 15, 28, 0.94) 100%);
-  border: 1px solid rgba(125, 211, 252, 0.16);
+  color: var(--text-primary);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--surface-strong) 95%, transparent) 0%, color-mix(in srgb, var(--surface) 95%, transparent) 100%);
+  border: 1px solid var(--line-strong);
   box-shadow:
     0 14px 36px rgba(8, 15, 31, 0.32),
-    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
   backdrop-filter: blur(18px);
   transform: translateY(0) scale(1);
   transition:
@@ -299,10 +418,10 @@ img {
 .mobile-fab-button:hover,
 .mobile-fab-button:active {
   transform: translateY(-2px) scale(1.02);
-  border-color: rgba(125, 211, 252, 0.28);
+  border-color: color-mix(in srgb, var(--brand-primary) 34%, transparent);
   box-shadow:
     0 18px 42px rgba(8, 15, 31, 0.38),
-    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
 }
 
 .mobile-nav-backdrop {
@@ -356,7 +475,7 @@ img {
 .app-loading-spinner {
   border-radius: 999px;
   border: 3px solid rgba(148, 163, 184, 0.2);
-  border-top-color: #7dd3fc;
+  border-top-color: var(--brand-primary);
   animation: mentorix-spin 0.9s linear infinite;
 }
 
@@ -375,8 +494,8 @@ img {
   justify-content: center;
   padding: 1.5rem;
   background:
-    radial-gradient(circle at top left, rgba(34, 211, 238, 0.12), transparent 26%),
-    radial-gradient(circle at bottom right, rgba(52, 211, 153, 0.1), transparent 28%),
+    radial-gradient(circle at top left, color-mix(in srgb, var(--brand-primary) 18%, transparent), transparent 26%),
+    radial-gradient(circle at bottom right, color-mix(in srgb, var(--brand-secondary) 16%, transparent), transparent 28%),
     rgba(8, 15, 31, 0.82);
   backdrop-filter: blur(14px);
 }
@@ -392,7 +511,7 @@ img {
 }
 
 .app-loading-brand {
-  color: #7dd3fc;
+  color: var(--brand-primary);
   font-size: 0.82rem;
   font-weight: 700;
   letter-spacing: 0.14em;
@@ -536,7 +655,7 @@ img {
 }
 
 .competition-kicker {
-  color: #7dd3fc;
+  color: var(--brand-primary);
   font-size: 0.8rem;
   font-weight: 700;
   letter-spacing: 0.08em;
@@ -977,6 +1096,23 @@ img {
 @keyframes mentorix-spin {
   to {
     transform: rotate(360deg);
+  }
+}
+
+@media (display-mode: standalone) {
+  body {
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-left: env(safe-area-inset-left, 0px);
+    padding-right: env(safe-area-inset-right, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  .desktop-sidebar {
+    border-right-color: var(--line-strong);
+  }
+
+  .glass-panel {
+    background: var(--surface-strong);
   }
 }
 

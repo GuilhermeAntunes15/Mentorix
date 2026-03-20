@@ -5,6 +5,17 @@ import { AppLoadingScreen } from '@/components/feedback/AppLoadingScreen';
 import { Button } from '@/components/common/Button';
 import { useSession } from '@/hooks';
 
+function BrandGlyph() {
+  return (
+    <svg className="app-brand-glyph" viewBox="0 0 48 48" aria-hidden="true" focusable="false">
+      <rect x="1" y="1" width="46" height="46" rx="15" fill="rgba(255, 255, 255, 0.02)" stroke="var(--line-strong)" />
+      <circle cx="24" cy="24" r="13" fill="none" stroke="var(--brand-secondary)" strokeWidth="6" />
+      <rect x="21" y="9" width="6" height="30" rx="3" fill="rgba(8, 12, 20, 0.9)" transform="rotate(28 24 24)" />
+      <circle cx="29" cy="15" r="3" fill="var(--brand-primary)" />
+    </svg>
+  );
+}
+
 export function AppShell() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const location = useLocation();
@@ -59,9 +70,13 @@ export function AppShell() {
             marginBottom: '1rem'
           }}
         >
-          <span style={{ color: '#7dd3fc', fontWeight: 700, letterSpacing: '0.08em', fontSize: '0.84rem' }}>
-            MENTORIX
-          </span>
+          <div className="app-brand-block">
+            <BrandGlyph />
+            <div>
+              <span className="app-brand-wordmark">MENTORIX</span>
+              <span className="app-mode-badge">WPA</span>
+            </div>
+          </div>
           <h2 className="gradient-text" style={{ margin: '0.4rem 0 0' }}>
             {session?.role === 'admin' ? 'Painel administrativo' : session?.role === 'aluno' ? 'Painel do aluno' : 'Painel do professor'}
           </h2>
@@ -78,9 +93,9 @@ export function AppShell() {
                 gap: '0.75rem',
                 borderRadius: 20,
                 padding: '0.95rem 1rem',
-                background: isActive ? 'rgba(125, 211, 252, 0.12)' : 'transparent',
-                color: isActive ? '#f8fafc' : '#94a3b8',
-                border: `1px solid ${isActive ? 'rgba(125, 211, 252, 0.18)' : 'transparent'}`
+                background: isActive ? 'var(--nav-active-bg)' : 'transparent',
+                color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)',
+                border: `1px solid ${isActive ? 'var(--nav-active-border)' : 'transparent'}`
               })}
             >
               <Icon size={18} />
@@ -113,7 +128,13 @@ export function AppShell() {
         <div className="glass-panel" style={{ borderRadius: 28, padding: '1rem', display: 'grid', gap: '0.85rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem' }}>
             <div>
-              <div style={{ color: '#7dd3fc', fontWeight: 700, letterSpacing: '0.08em', fontSize: '0.8rem' }}>MENTORIX</div>
+              <div className="app-brand-block app-brand-block-compact">
+                <BrandGlyph />
+                <div>
+                  <div className="app-brand-wordmark app-brand-wordmark-compact">MENTORIX</div>
+                  <span className="app-mode-badge">WPA</span>
+                </div>
+              </div>
               <strong style={{ display: 'block', marginTop: '0.25rem' }}>Navegacao rapida</strong>
             </div>
             <Button variant="ghost" onClick={() => setMobileMenuOpen(false)}>Fechar</Button>
@@ -131,9 +152,9 @@ export function AppShell() {
                   gap: '0.75rem',
                   borderRadius: 18,
                   padding: '0.95rem 1rem',
-                  background: isActive ? 'rgba(125, 211, 252, 0.14)' : 'rgba(15, 23, 42, 0.58)',
-                  color: '#f8fafc',
-                  border: `1px solid ${isActive ? 'rgba(125, 211, 252, 0.2)' : 'rgba(148, 163, 184, 0.12)'}`
+                  background: isActive ? 'var(--mobile-nav-active-bg)' : 'var(--mobile-nav-bg)',
+                  color: 'var(--text-primary)',
+                  border: `1px solid ${isActive ? 'var(--mobile-nav-active-border)' : 'var(--mobile-nav-border)'}`
                 })}
               >
                 <Icon size={18} />

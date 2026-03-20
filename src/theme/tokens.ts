@@ -1,18 +1,18 @@
 export const theme = {
   colors: {
-    bg: '#07111f',
-    bgSoft: '#0b1020',
-    surface: 'rgba(11, 16, 32, 0.62)',
-    surfaceStrong: 'rgba(12, 22, 41, 0.82)',
-    line: 'rgba(148, 163, 184, 0.16)',
-    text: '#e2e8f0',
-    textMuted: '#94a3b8',
-    accent: '#7dd3fc',
-    accentStrong: '#22d3ee',
-    success: '#34d399',
+    bg: '#060912',
+    bgSoft: '#0b1220',
+    surface: 'rgba(10, 16, 30, 0.66)',
+    surfaceStrong: 'rgba(12, 20, 36, 0.84)',
+    line: 'rgba(173, 188, 213, 0.14)',
+    text: '#edf2ff',
+    textMuted: '#a0aec8',
+    accent: '#63f2de',
+    accentStrong: '#ffd174',
+    success: '#4ade80',
     warning: '#fbbf24',
     danger: '#fb7185',
-    info: '#60a5fa'
+    info: '#38bdf8'
   },
   radii: {
     sm: '14px',
@@ -21,7 +21,7 @@ export const theme = {
     pill: '999px'
   },
   shadows: {
-    glass: '0 18px 80px rgba(8, 15, 31, 0.28)'
+    glass: '0 18px 80px rgba(2, 8, 20, 0.42)'
   },
   spacing: {
     xs: '0.5rem',

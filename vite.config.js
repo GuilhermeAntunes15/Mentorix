@@ -6,13 +6,13 @@ export default defineConfig({
         react(),
         VitePWA({
             registerType: 'autoUpdate',
-            includeAssets: ['favicon.svg', 'mentorix-icon.svg', 'apple-touch-icon.svg'],
+            includeAssets: ['favicon.svg', 'mentorix-icon.svg', 'mentorix-maskable-icon.svg', 'apple-touch-icon.svg'],
             manifest: {
                 name: 'Mentorix',
                 short_name: 'Mentorix',
-                description: 'Gestao academica para professores com calendario, chamadas e desempenho.',
-                theme_color: '#0b1020',
-                background_color: '#07111f',
+                description: 'Gestao academica para professores com identidade visual exclusiva no modo WPA.',
+                theme_color: '#04070d',
+                background_color: '#04070d',
                 display: 'standalone',
                 orientation: 'portrait',
                 start_url: '/',
@@ -24,7 +24,7 @@ export default defineConfig({
                         purpose: 'any'
                     },
                     {
-                        src: 'apple-touch-icon.svg',
+                        src: 'mentorix-maskable-icon.svg',
                         sizes: '512x512',
                         type: 'image/svg+xml',
                         purpose: 'maskable'
