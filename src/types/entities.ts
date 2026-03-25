@@ -302,9 +302,11 @@ export interface StudentDetailBundle {
   aulas: AulaEntity[];
   chamadas: ChamadaEntity[];
   frequencias: FrequenciaEntity[];
+  quizzesCatalogo: QuizEntity[];
   quizzes: TentativaQuizEntity[];
+  quizzesPendentes: Array<{ quiz: QuizEntity; materia?: MateriaEntity; tentativa?: TentativaQuizEntity }>;
   atividades: EntregaAtividadeEntity[];
-  atividadesPendentes: Array<EntregaAtividadeEntity & { atividade?: AtividadeEntity }>;
+  atividadesPendentes: Array<{ atividade: AtividadeEntity; entrega?: EntregaAtividadeEntity; materia?: MateriaEntity }>;
   reposicoes: ReposicaoEntity[];
   entregasReposicao: EntregaReposicaoEntity[];
 }

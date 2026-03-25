@@ -1,9 +1,10 @@
-import { Download } from 'lucide-react';
+import { CheckCircle2, Download, XCircle } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { Badge } from '@/components/common/Badge';
 import { Button } from '@/components/common/Button';
 import { Card } from '@/components/common/Card';
+import { Input } from '@/components/common/Input';
 import { PageHeader } from '@/components/common/PageHeader';
 import { StatCard } from '@/components/common/StatCard';
 import { TextArea } from '@/components/common/TextArea';
@@ -11,19 +12,37 @@ import { EmptyState } from '@/components/feedback/EmptyState';
 import { ErrorState } from '@/components/feedback/ErrorState';
 import { LoadingState } from '@/components/feedback/LoadingState';
 import { useProfessor, useStudentDetails } from '@/hooks';
-import { studentProfilesRepository } from '@/services/repositories';
+import { activityDeliveriesRepository, quizAttemptsRepository, studentProfilesRepository } from '@/services/repositories';
 import { calculateAttendancePercentage, summarizeMakeups } from '@/utils/metrics';
 import { openStudentReportPrintWindow } from '@/utils/studentReport';
 
 export function StudentDetailsScreen() {
   const { professorId } = useProfessor();
   const { studentId } = useParams();
-  const { data, loading, error, metrics } = useStudentDetails(professorId, studentId);
+  const { data, loading, error, metrics, reload } = useStudentDetails(professorId, studentId);
   const [profileText, setProfileText] = useState('');
+  const [savingPendingId, setSavingPendingId] = useState<string | null>(null);
+  const [activityScores, setActivityScores] = useState<Record<string, string>>({});
 
   useEffect(() => {
     setProfileText(data?.perfil?.perfilTexto ?? '');
   }, [data?.perfil?.perfilTexto]);
+
+  useEffect(() => {
+    if (!data) {
+      setActivityScores({});
+      return;
+    }
+
+    setActivityScores(
+      Object.fromEntries(
+        data.atividadesPendentes.map((item) => [
+          item.atividade.id,
+          String(item.entrega?.nota ?? item.atividade.notaMaxima ?? '')
+        ])
+      )
+    );
+  }, [data]);
 
   const attendanceBySubject = useMemo(() => {
     if (!data) {
@@ -58,6 +77,50 @@ export function StudentDetailsScreen() {
       alunoId: studentId,
       perfilTexto: profileText
     });
+  }
+
+  async function registerQuizResult(quizId: string, turmaId: string, acertou: boolean) {
+    if (!studentId) {
+      return;
+    }
+
+    try {
+      setSavingPendingId(quizId);
+      await quizAttemptsRepository.upsertMany(professorId, quizId, turmaId, [
+        {
+          alunoId: studentId,
+          realizado: true,
+          acertouDePrimeira: acertou,
+          acertos: acertou ? 1 : 0,
+          tentativas: 1
+        }
+      ]);
+      await reload();
+    } finally {
+      setSavingPendingId(null);
+    }
+  }
+
+  async function savePendingActivity(atividadeId: string) {
+    if (!studentId) {
+      return;
+    }
+
+    try {
+      setSavingPendingId(atividadeId);
+      const score = Number(activityScores[atividadeId] ?? 0);
+      await activityDeliveriesRepository.upsertMany(professorId, atividadeId, [
+        {
+          alunoId: studentId,
+          status: 'corrigido',
+          nota: Number.isFinite(score) ? score : 0,
+          entregueEm: new Date().toISOString()
+        }
+      ]);
+      await reload();
+    } finally {
+      setSavingPendingId(null);
+    }
   }
 
   function handleGenerateReport() {
@@ -130,6 +193,72 @@ export function StudentDetailsScreen() {
       </div>
 
       <div className="responsive-grid" style={{ alignItems: 'start' }}>
+        <Card title="Pendencias rapidas" subtitle="Resolva quizzes e atividades pendentes sem sair do detalhe do aluno.">
+          <div style={{ display: 'grid', gap: '1rem' }}>
+            {!!data.quizzesPendentes.length && (
+              <div style={{ display: 'grid', gap: '0.75rem' }}>
+                <strong>Quizzes pendentes</strong>
+                {data.quizzesPendentes.map((item) => (
+                  <div key={item.quiz.id} style={{ display: 'grid', gap: '0.6rem', paddingBottom: '0.8rem', borderBottom: '1px solid rgba(148, 163, 184, 0.08)' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap' }}>
+                      <div>
+                        <strong>{item.quiz.titulo}</strong>
+                        <p style={{ margin: '0.25rem 0 0', color: '#94a3b8' }}>{item.materia?.nome ?? 'Materia'} • {item.quiz.data}</p>
+                      </div>
+                      <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap' }}>
+                        <Button variant="secondary" onClick={() => void registerQuizResult(item.quiz.id, item.quiz.turmaId, false)} disabled={savingPendingId === item.quiz.id}>
+                          <XCircle size={16} /> Errou
+                        </Button>
+                        <Button onClick={() => void registerQuizResult(item.quiz.id, item.quiz.turmaId, true)} disabled={savingPendingId === item.quiz.id}>
+                          <CheckCircle2 size={16} /> Acertou
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {!!data.atividadesPendentes.length && (
+              <div style={{ display: 'grid', gap: '0.75rem' }}>
+                <strong>Atividades pendentes</strong>
+                {data.atividadesPendentes.map((item) => (
+                  <div key={item.atividade.id} style={{ display: 'grid', gap: '0.75rem', paddingBottom: '0.8rem', borderBottom: '1px solid rgba(148, 163, 184, 0.08)' }}>
+                    <div>
+                      <strong>{item.atividade.titulo}</strong>
+                      <p style={{ margin: '0.25rem 0 0', color: '#94a3b8' }}>
+                        {item.materia?.nome ?? 'Materia'} • entrega {item.atividade.dataEntrega}
+                      </p>
+                    </div>
+                    <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'end', flexWrap: 'wrap' }}>
+                      <div style={{ minWidth: 140 }}>
+                        <Input
+                          label="Nota"
+                          type="number"
+                          value={activityScores[item.atividade.id] ?? ''}
+                          onChange={(event) =>
+                            setActivityScores((current) => ({
+                              ...current,
+                              [item.atividade.id]: event.target.value
+                            }))
+                          }
+                        />
+                      </div>
+                      <Button onClick={() => void savePendingActivity(item.atividade.id)} disabled={savingPendingId === item.atividade.id}>
+                        <CheckCircle2 size={16} /> Salvar nota
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {!data.quizzesPendentes.length && !data.atividadesPendentes.length && (
+              <EmptyState title="Nada pendente" description="Este aluno esta com quizzes e atividades em dia." />
+            )}
+          </div>
+        </Card>
+
         <Card title="Frequencia por materia" subtitle="Presencas / total de aulas com chamada.">
           <div style={{ display: 'grid', gap: '0.75rem' }}>
             {attendanceBySubject.map((item) => (
@@ -155,8 +284,8 @@ export function StudentDetailsScreen() {
           {data.atividadesPendentes.length ? (
             <div style={{ display: 'grid', gap: '0.75rem' }}>
               {data.atividadesPendentes.map((item) => (
-                <div key={item.id} style={{ paddingBottom: '0.65rem', borderBottom: '1px solid rgba(148, 163, 184, 0.08)' }}>
-                  <strong>{item.atividade?.titulo ?? 'Atividade pendente'}</strong>
+                <div key={item.atividade.id} style={{ paddingBottom: '0.65rem', borderBottom: '1px solid rgba(148, 163, 184, 0.08)' }}>
+                  <strong>{item.atividade.titulo}</strong>
                   <p style={{ margin: '0.35rem 0 0', color: '#94a3b8' }}>Aluno pendente: {data.aluno.nome}</p>
                 </div>
               ))}
