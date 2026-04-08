@@ -7,27 +7,53 @@ import {
   studentsRepository
 } from '@/services/repositories';
 import { isPastDate } from '@/utils/date';
-import type { ChamadaEntity, PresenceStatus } from '@/types';
+import type { ChamadaEntity, DayLessonView, PresenceStatus } from '@/types';
 
 interface QuickAttendanceRow {
   alunoId: string;
   nome: string;
-  status: PresenceStatus;
+  statuses: Record<string, PresenceStatus>;
+}
+
+interface QuickAttendanceLesson {
+  lessonId: string;
+  title: string;
+  timeLabel: string;
+  status: ChamadaEntity['status'];
 }
 
 const nameCollator = new Intl.Collator('pt-BR', {
   sensitivity: 'base'
 });
 
-export function useQuickAttendance(professorId: string, lessonId: string | undefined, turmaId: string | undefined, date: string) {
-  const [attendance, setAttendance] = useState<ChamadaEntity | null>(null);
+export function useQuickAttendance(
+  professorId: string,
+  lessons: DayLessonView[],
+  turmaId: string | undefined,
+  date: string
+) {
+  const [attendanceMap, setAttendanceMap] = useState<Record<string, ChamadaEntity | null>>({});
   const [rows, setRows] = useState<QuickAttendanceRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const retroativa = useMemo(() => isPastDate(date), [date]);
+  const lessonIdsKey = useMemo(() => lessons.map((item) => item.aula.id).join('|'), [lessons]);
+  const lessonSummaries = useMemo<QuickAttendanceLesson[]>(
+    () =>
+      lessons.map((item) => ({
+        lessonId: item.aula.id,
+        title: item.materia?.nome ?? item.aula.titulo,
+        timeLabel: `${item.aula.horaInicio} - ${item.aula.horaFim}`,
+        status: item.chamada?.status ?? 'nao_iniciada'
+      })),
+    [lessons]
+  );
 
   const load = useCallback(async () => {
-    if (!lessonId || !turmaId) {
+    if (!lessons.length || !turmaId) {
+      setAttendanceMap({});
+      setRows([]);
+      setError(null);
       return;
     }
 
@@ -35,27 +61,35 @@ export function useQuickAttendance(professorId: string, lessonId: string | undef
       setLoading(true);
       setError(null);
 
-      const [existingAttendance, relations, students] = await Promise.all([
-        attendanceRepository.getByLessonAndDate(professorId, lessonId, date),
+      const [existingAttendances, relations, students] = await Promise.all([
+        Promise.all(lessons.map((lesson) => attendanceRepository.getByLessonAndDate(professorId, lesson.aula.id, date))),
         studentClassRepository.listByClass(professorId, turmaId),
         studentsRepository.listOrdered(professorId)
       ]);
 
-      const frequencyRows = existingAttendance
-        ? await frequencyRepository.listByAttendance(professorId, existingAttendance.id)
-        : [];
+      const frequenciesByLesson = await Promise.all(
+        existingAttendances.map(async (attendance) =>
+          attendance ? frequencyRepository.listByAttendance(professorId, attendance.id) : []
+        )
+      );
 
-      setAttendance(existingAttendance);
+      setAttendanceMap(
+        Object.fromEntries(lessons.map((lesson, index) => [lesson.aula.id, existingAttendances[index] ?? null]))
+      );
       setRows(
         relations
           .filter((relation) => relation.ativo)
           .map((relation) => {
             const student = students.find((item) => item.id === relation.alunoId);
-            const frequency = frequencyRows.find((item) => item.alunoId === relation.alunoId);
             return {
               alunoId: relation.alunoId,
               nome: student?.nome ?? 'Aluno',
-              status: frequency?.status ?? 'presente'
+              statuses: Object.fromEntries(
+                lessons.map((lesson, index) => {
+                  const frequency = frequenciesByLesson[index].find((item) => item.alunoId === relation.alunoId);
+                  return [lesson.aula.id, frequency?.status === 'presente' ? 'presente' : 'ausente'];
+                })
+              )
             };
           })
           .sort((left, right) => nameCollator.compare(left.nome, right.nome))
@@ -65,79 +99,104 @@ export function useQuickAttendance(professorId: string, lessonId: string | undef
     } finally {
       setLoading(false);
     }
-  }, [date, lessonId, professorId, turmaId]);
+  }, [date, lessons, professorId, turmaId]);
 
   useEffect(() => {
     void load();
-  }, [load]);
+  }, [load, lessonIdsKey]);
 
-  const setStatusForStudent = useCallback((alunoId: string, status: PresenceStatus) => {
+  const setStatusForStudent = useCallback((alunoId: string, lessonId: string, status: PresenceStatus) => {
     setRows((currentRows) =>
-      currentRows.map((row) => (row.alunoId === alunoId ? { ...row, status } : row))
+      currentRows.map((row) =>
+        row.alunoId === alunoId
+          ? {
+              ...row,
+              statuses: {
+                ...row.statuses,
+                [lessonId]: status
+              }
+            }
+          : row
+      )
+    );
+  }, []);
+
+  const toggleStatusForStudent = useCallback((alunoId: string, lessonId: string) => {
+    setRows((currentRows) =>
+      currentRows.map((row) =>
+        row.alunoId === alunoId
+          ? {
+              ...row,
+              statuses: {
+                ...row.statuses,
+                [lessonId]: row.statuses[lessonId] === 'presente' ? 'ausente' : 'presente'
+              }
+            }
+          : row
+      )
     );
   }, []);
 
   const markAll = useCallback((status: PresenceStatus) => {
-    setRows((currentRows) => currentRows.map((row) => ({ ...row, status })));
-  }, []);
+    setRows((currentRows) =>
+      currentRows.map((row) => ({
+        ...row,
+        statuses: Object.fromEntries(
+          lessons.map((lesson) => [lesson.aula.id, status])
+        )
+      }))
+    );
+  }, [lessons]);
+
+  const persist = useCallback(async (status: ChamadaEntity['status']) => {
+    if (!lessons.length) {
+      return;
+    }
+
+    const nextAttendanceMap = { ...attendanceMap };
+
+    for (const lesson of lessons) {
+      let effectiveAttendance = nextAttendanceMap[lesson.aula.id] ?? null;
+
+      if (!effectiveAttendance) {
+        effectiveAttendance = await attendanceCommands.createAttendance(professorId, lesson.aula.id, date, retroativa);
+        nextAttendanceMap[lesson.aula.id] = effectiveAttendance;
+      }
+
+      await frequencyRepository.upsertMany(
+        professorId,
+        effectiveAttendance.id,
+        lesson.aula.id,
+        rows.map((row) => ({
+          alunoId: row.alunoId,
+          status: row.statuses[lesson.aula.id] ?? 'presente'
+        }))
+      );
+
+      await attendanceCommands.updateAttendanceStatus(effectiveAttendance.id, status);
+    }
+
+    setAttendanceMap(nextAttendanceMap);
+    await load();
+  }, [attendanceMap, date, lessons, load, professorId, retroativa, rows]);
 
   const save = useCallback(async () => {
-    if (!lessonId) {
-      return;
-    }
-
-    let effectiveAttendance = attendance;
-    if (!effectiveAttendance) {
-      effectiveAttendance = await attendanceCommands.createAttendance(professorId, lessonId, date, retroativa);
-      setAttendance(effectiveAttendance);
-    }
-
-    await frequencyRepository.upsertMany(
-      professorId,
-      effectiveAttendance.id,
-      lessonId,
-      rows.map((row) => ({
-        alunoId: row.alunoId,
-        status: row.status
-      }))
-    );
-
-    await attendanceCommands.updateAttendanceStatus(effectiveAttendance.id, 'concluida');
-    await load();
-  }, [attendance, date, lessonId, load, professorId, retroativa, rows]);
+    await persist('concluida');
+  }, [persist]);
 
   const saveDraft = useCallback(async () => {
-    if (!lessonId) {
-      return;
-    }
-
-    let effectiveAttendance = attendance;
-    if (!effectiveAttendance) {
-      effectiveAttendance = await attendanceCommands.createAttendance(professorId, lessonId, date, retroativa);
-      setAttendance(effectiveAttendance);
-    }
-
-    await frequencyRepository.upsertMany(
-      professorId,
-      effectiveAttendance.id,
-      lessonId,
-      rows.map((row) => ({
-        alunoId: row.alunoId,
-        status: row.status
-      }))
-    );
-
-    await attendanceCommands.updateAttendanceStatus(effectiveAttendance.id, 'em_andamento');
-    await load();
-  }, [attendance, date, lessonId, load, professorId, retroativa, rows]);
+    await persist('em_andamento');
+  }, [persist]);
 
   return {
-    attendance,
+    attendanceMap,
+    lessonSummaries,
     rows,
     loading,
     error,
     retroativa,
     setStatusForStudent,
+    toggleStatusForStudent,
     markAll,
     save,
     saveDraft,

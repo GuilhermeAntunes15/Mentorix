@@ -62,8 +62,8 @@ export function AppShell() {
         <div
           className="glass-panel"
           style={{
-            borderRadius: 30,
-            padding: '1.2rem',
+            borderRadius: 22,
+            padding: '1rem',
             marginBottom: '1rem'
           }}
         >
@@ -74,7 +74,7 @@ export function AppShell() {
               <span className="app-mode-badge">WPA</span>
             </div>
           </div>
-          <h2 className="gradient-text" style={{ margin: '0.4rem 0 0' }}>
+          <h2 style={{ margin: '0.45rem 0 0', fontSize: '1.15rem' }}>
             {session?.role === 'admin' ? 'Painel administrativo' : session?.role === 'aluno' ? 'Painel do aluno' : 'Painel do professor'}
           </h2>
         </div>
@@ -88,8 +88,8 @@ export function AppShell() {
                 display: 'flex',
                 alignItems: 'center',
                 gap: '0.75rem',
-                borderRadius: 20,
-                padding: '0.95rem 1rem',
+                borderRadius: 16,
+                padding: '0.85rem 0.95rem',
                 background: isActive ? 'var(--nav-active-bg)' : 'transparent',
                 color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)',
                 border: `1px solid ${isActive ? 'var(--nav-active-border)' : 'transparent'}`

@@ -18,10 +18,12 @@ function getAttendanceTone(status: 'nao_iniciada' | 'em_andamento' | 'concluida'
 
 export function LessonCard({
   item,
-  onOpenNotes
+  onOpenNotes,
+  removing
 }: {
   item: DayLessonView;
   onOpenNotes: () => void;
+  removing?: boolean;
 }) {
   const attendanceStatus = item.chamada?.status ?? 'nao_iniciada';
   const isManagement = item.aula.categoria === 'gestao';
@@ -62,6 +64,7 @@ export function LessonCard({
       <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
         <Button
           variant="secondary"
+          disabled={removing}
           onClick={(event) => {
             event.stopPropagation();
             onOpenNotes();

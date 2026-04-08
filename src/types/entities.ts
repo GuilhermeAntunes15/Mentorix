@@ -121,6 +121,7 @@ export interface AulaEntity extends BaseEntity {
   descricao?: string;
   escola?: string;
   data: ISODateString;
+  datasIgnoradas?: ISODateString[];
   diaSemana: number;
   recorrente: boolean;
   horaInicio: string;

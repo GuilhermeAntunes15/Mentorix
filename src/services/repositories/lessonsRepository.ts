@@ -1,7 +1,7 @@
 import { BaseRepository } from '@/services/repositories/baseRepository';
 import type { AulaEntity } from '@/types';
 import { COLLECTIONS } from '@/database/collections';
-import { getLessonWeekday } from '@/utils/lessons';
+import { isLessonScheduledForDate } from '@/utils/lessons';
 
 class LessonsRepository extends BaseRepository<AulaEntity> {
   constructor() {
@@ -19,9 +19,8 @@ class LessonsRepository extends BaseRepository<AulaEntity> {
 
   async listByDate(professorId: string, date: string) {
     const items = await this.listByProfessor(professorId);
-    const weekday = getLessonWeekday(date);
     return items
-      .filter((item) => (item.recorrente ? item.diaSemana === weekday : item.data === date))
+      .filter((item) => isLessonScheduledForDate(item, date))
       .sort((left, right) => left.horaInicio.localeCompare(right.horaInicio));
   }
 

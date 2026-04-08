@@ -1,3 +1,4 @@
+import { Trash2 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { Badge } from '@/components/common/Badge';
 import { Button } from '@/components/common/Button';
@@ -6,6 +7,7 @@ import { Modal } from '@/components/common/Modal';
 import { Select } from '@/components/common/Select';
 import { TextArea } from '@/components/common/TextArea';
 import type { AulaEntity, LessonCategory, LessonType, ManagementTaskType, MateriaEntity, TurmaEntity } from '@/types';
+import { isLessonScheduledForDate } from '@/utils/lessons';
 import { getSlotById, getWeekDays, schoolOptions, schoolSlotMap, type SchoolKey } from '@/utils/schedule';
 
 interface DraftLesson {
@@ -30,8 +32,10 @@ interface LessonSchedulerModalProps {
   classes: TurmaEntity[];
   subjects: MateriaEntity[];
   existingLessons: AulaEntity[];
+  removingLessonId?: string | null;
   onClose: () => void;
   onSave: (entries: DraftLesson[]) => Promise<void>;
+  onRemoveOccurrence: (lesson: AulaEntity, date: string) => Promise<void>;
 }
 
 const initialDraftState = {
@@ -53,8 +57,10 @@ export function LessonSchedulerModal({
   classes,
   subjects,
   existingLessons,
+  removingLessonId,
   onClose,
-  onSave
+  onSave,
+  onRemoveOccurrence
 }: LessonSchedulerModalProps) {
   const weekDays = useMemo(() => getWeekDays(anchorDate), [anchorDate]);
   const [draftState, setDraftState] = useState(initialDraftState);
@@ -88,7 +94,7 @@ export function LessonSchedulerModal({
       weekDays.map((day) => ({
         ...day,
         lessons: existingLessons
-          .filter((lesson) => (lesson.recorrente ? lesson.diaSemana === day.weekday : lesson.data === day.isoDate))
+          .filter((lesson) => isLessonScheduledForDate(lesson, day.isoDate))
           .sort((left, right) => left.horaInicio.localeCompare(right.horaInicio))
       })),
     [existingLessons, weekDays]
@@ -345,16 +351,41 @@ export function LessonSchedulerModal({
                     <div
                       key={lesson.id}
                       style={{
-                        padding: '0.8rem 0.9rem',
-                        borderRadius: 18,
+                        padding: '0.85rem 0.9rem',
+                        borderRadius: 16,
                         background: 'rgba(15, 23, 42, 0.45)',
                         border: '1px solid rgba(148, 163, 184, 0.1)'
                       }}
                     >
-                      <strong>{lesson.titulo}</strong>
-                      <p style={{ margin: '0.25rem 0 0', color: '#94a3b8' }}>
-                        {lesson.escola ?? 'Escola'} - {lesson.horaInicio} - {lesson.horaFim}
-                      </p>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', gap: '0.75rem', alignItems: 'flex-start' }}>
+                        <div>
+                          <strong>{lesson.titulo}</strong>
+                          <p style={{ margin: '0.25rem 0 0', color: '#94a3b8' }}>
+                            {lesson.escola ?? 'Escola'} - {lesson.horaInicio} - {lesson.horaFim}
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          disabled={removingLessonId === lesson.id}
+                          onClick={() => void onRemoveOccurrence(lesson, day.isoDate)}
+                          aria-label={lesson.recorrente ? 'Apagar so hoje' : 'Apagar aula'}
+                          style={{
+                            border: '1px solid rgba(148, 163, 184, 0.16)',
+                            background: 'transparent',
+                            color: removingLessonId === lesson.id ? '#cbd5e1' : '#94a3b8',
+                            opacity: removingLessonId === lesson.id ? 0.7 : 1,
+                            borderRadius: 999,
+                            padding: '0.38rem 0.6rem',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '0.35rem',
+                            fontSize: '0.78rem'
+                          }}
+                        >
+                          <Trash2 size={14} />
+                          {removingLessonId === lesson.id ? 'Apagando...' : lesson.recorrente ? 'Apagar so hoje' : 'Apagar aula'}
+                        </button>
+                      </div>
                     </div>
                   ))
                 ) : (

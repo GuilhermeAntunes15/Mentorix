@@ -34,6 +34,14 @@ export function findLessonBySlot(lessons: AulaEntity[], data: string, horaInicio
   );
 }
 
+export function isLessonScheduledForDate(lesson: AulaEntity, date: string) {
+  if (lesson.datasIgnoradas?.includes(date)) {
+    return false;
+  }
+
+  return lesson.recorrente ? lesson.diaSemana === getLessonWeekday(date) : lesson.data === date;
+}
+
 export function findRecurringLessonsBySlot(
   lessons: AulaEntity[],
   diaSemana: number,

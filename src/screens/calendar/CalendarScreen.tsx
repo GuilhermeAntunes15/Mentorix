@@ -21,6 +21,7 @@ export function CalendarScreen() {
   const [date, setDate] = useState(toISODate(new Date()));
   const [modalOpen, setModalOpen] = useState(false);
   const [noteLesson, setNoteLesson] = useState<DayLessonView | null>(null);
+  const [removingLessonId, setRemovingLessonId] = useState<string | null>(null);
   const classes = useCollectionResource(professorId, classesRepository);
   const subjects = useCollectionResource(professorId, subjectsRepository);
   const lessons = useCollectionResource(professorId, lessonsRepository);
@@ -77,11 +78,40 @@ export function CalendarScreen() {
     }
   }
 
+  async function handleRemoveLesson(item: DayLessonView) {
+    const message = item.aula.recorrente
+      ? 'Deseja apagar somente esta aula desta data? As outras semanas vao continuar no calendario.'
+      : 'Deseja apagar esta aula definitivamente deste calendario?';
+
+    if (!window.confirm(message)) {
+      return;
+    }
+
+    try {
+      setRemovingLessonId(item.aula.id);
+
+      if (item.aula.recorrente) {
+        const datasIgnoradas = [...new Set([...(item.aula.datasIgnoradas ?? []), item.dataReferencia])].sort();
+        await lessons.updateItem(item.aula.id, { datasIgnoradas });
+      } else {
+        await lessons.removeItem(item.aula.id);
+      }
+
+      if (noteLesson?.aula.id === item.aula.id) {
+        setNoteLesson(null);
+      }
+
+      await dayLessons.reload();
+    } finally {
+      setRemovingLessonId(null);
+    }
+  }
+
   return (
     <>
       <PageHeader
-        title="Calendario com aulas do dia"
-        description="Veja sua rotina do dia, incluindo aulas e blocos recorrentes de gestao. Toque no botao flutuante para montar a semana."
+        title="Calendario do dia"
+        description="Veja a rotina do dia com menos ruido visual. Agora tambem e possivel apagar uma aula especifica da data e deixar o horario vazio."
         actions={
           hasAttendanceForDay ? (
             <Link to={`/chamada?date=${date}`}>
@@ -111,6 +141,7 @@ export function CalendarScreen() {
           <LessonCard
             key={item.aula.id}
             item={item}
+            removing={removingLessonId === item.aula.id}
             onOpenNotes={() => {
               setNoteLesson(item);
             }}
@@ -133,8 +164,15 @@ export function CalendarScreen() {
         classes={classes.items}
         subjects={subjects.items}
         existingLessons={lessons.items}
+        removingLessonId={removingLessonId}
         onClose={() => setModalOpen(false)}
         onSave={handleSaveWeek}
+        onRemoveOccurrence={async (lesson, lessonDate) => {
+          await handleRemoveLesson({
+            aula: lesson,
+            dataReferencia: lessonDate
+          });
+        }}
       />
 
       <LessonNotesModal

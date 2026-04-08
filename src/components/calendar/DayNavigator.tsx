@@ -17,7 +17,7 @@ export function DayNavigator({
     <div
       className="glass-panel"
       style={{
-        borderRadius: 24,
+        borderRadius: 18,
         padding: '1rem',
         display: 'flex',
         flexWrap: 'wrap',
@@ -27,8 +27,8 @@ export function DayNavigator({
       }}
     >
       <div style={{ minWidth: 0 }}>
-        <span style={{ color: '#7dd3fc', fontWeight: 700 }}>Dia em foco</span>
-        <h2 style={{ margin: '0.25rem 0 0', wordBreak: 'break-word' }}>{formatLongDate(date)}</h2>
+        <span style={{ color: '#86efac', fontWeight: 700, fontSize: '0.82rem', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Dia em foco</span>
+        <h2 style={{ margin: '0.25rem 0 0', wordBreak: 'break-word', fontSize: '1.3rem' }}>{formatLongDate(date)}</h2>
       </div>
 
       <div className="day-navigator-actions" style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>

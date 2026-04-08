@@ -1,32 +1,29 @@
 :root {
   color-scheme: dark;
-  font-family: "Space Grotesk", "Avenir Next", "Segoe UI", "Helvetica Neue", sans-serif;
+  font-family: "Segoe UI Variable Display", "Segoe UI", "Helvetica Neue", sans-serif;
   line-height: 1.5;
   font-weight: 400;
-  --bg-base: #060912;
-  --bg-depth: #0b1220;
-  --bg-elevated: #101a2e;
-  --surface: rgba(10, 16, 30, 0.66);
-  --surface-strong: rgba(12, 20, 36, 0.84);
-  --line-soft: rgba(173, 188, 213, 0.14);
-  --line-strong: rgba(173, 188, 213, 0.22);
-  --text-primary: #edf2ff;
-  --text-secondary: #a0aec8;
-  --brand-primary: #63f2de;
-  --brand-secondary: #ffd174;
-  --brand-tertiary: #ff7f63;
-  --brand-gradient: linear-gradient(128deg, var(--brand-primary) 0%, var(--brand-secondary) 56%, var(--brand-tertiary) 100%);
-  --panel-shadow: 0 18px 80px rgba(2, 8, 20, 0.42);
-  --nav-active-bg: rgba(99, 242, 222, 0.14);
-  --nav-active-border: rgba(99, 242, 222, 0.32);
-  --mobile-nav-bg: rgba(15, 24, 42, 0.62);
-  --mobile-nav-border: rgba(173, 188, 213, 0.18);
-  --mobile-nav-active-bg: rgba(255, 209, 116, 0.16);
-  --mobile-nav-active-border: rgba(255, 209, 116, 0.34);
-  background:
-    radial-gradient(circle at 16% 8%, rgba(99, 242, 222, 0.2), transparent 28%),
-    radial-gradient(circle at 84% 18%, rgba(255, 209, 116, 0.17), transparent 28%),
-    linear-gradient(170deg, var(--bg-base) 0%, var(--bg-depth) 52%, var(--bg-elevated) 100%);
+  --bg-base: #090d16;
+  --bg-depth: #0f172a;
+  --bg-elevated: #111827;
+  --surface: rgba(15, 23, 42, 0.76);
+  --surface-strong: rgba(15, 23, 42, 0.9);
+  --line-soft: rgba(148, 163, 184, 0.14);
+  --line-strong: rgba(148, 163, 184, 0.22);
+  --text-primary: #e5eefc;
+  --text-secondary: #94a3b8;
+  --brand-primary: #22c55e;
+  --brand-secondary: #4ade80;
+  --brand-tertiary: #16a34a;
+  --brand-gradient: linear-gradient(135deg, var(--brand-primary) 0%, var(--brand-secondary) 100%);
+  --panel-shadow: 0 12px 36px rgba(2, 8, 20, 0.22);
+  --nav-active-bg: rgba(34, 197, 94, 0.12);
+  --nav-active-border: rgba(34, 197, 94, 0.34);
+  --mobile-nav-bg: rgba(15, 23, 42, 0.82);
+  --mobile-nav-border: rgba(148, 163, 184, 0.18);
+  --mobile-nav-active-bg: rgba(34, 197, 94, 0.12);
+  --mobile-nav-active-border: rgba(34, 197, 94, 0.34);
+  background: linear-gradient(180deg, var(--bg-base) 0%, var(--bg-depth) 100%);
   color: var(--text-primary);
 }
 
@@ -80,18 +77,12 @@ body::after {
 }
 
 body::before {
-  opacity: 0.42;
-  background-image:
-    linear-gradient(rgba(173, 188, 213, 0.08) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(173, 188, 213, 0.08) 1px, transparent 1px);
-  background-size: 34px 34px;
-  mask-image: radial-gradient(circle at center, black 26%, transparent 82%);
+  opacity: 0.2;
+  background: radial-gradient(circle at top left, rgba(34, 197, 94, 0.12), transparent 28%);
 }
 
 body::after {
-  background:
-    radial-gradient(circle at 15% 16%, rgba(99, 242, 222, 0.16), transparent 26%),
-    radial-gradient(circle at 84% 80%, rgba(255, 209, 116, 0.16), transparent 28%);
+  background: radial-gradient(circle at bottom right, rgba(14, 165, 233, 0.08), transparent 24%);
 }
 
 button,
@@ -123,7 +114,7 @@ img {
 .desktop-sidebar {
   padding: 1rem;
   border-right: 1px solid var(--line-soft);
-  background: linear-gradient(180deg, color-mix(in srgb, var(--surface-strong) 70%, transparent) 0%, color-mix(in srgb, var(--surface) 85%, transparent) 100%);
+  background: rgba(9, 13, 22, 0.78);
   backdrop-filter: blur(24px);
 }
 
@@ -131,7 +122,7 @@ img {
   background: var(--surface);
   border: 1px solid var(--line-soft);
   box-shadow: var(--panel-shadow);
-  backdrop-filter: blur(24px);
+  backdrop-filter: blur(18px);
 }
 
 .gradient-text {
@@ -194,10 +185,10 @@ html.wpa-mode .app-mode-badge {
 }
 
 .page-content {
-  padding: 1.5rem;
+  padding: 1.25rem;
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
+  gap: 1.25rem;
   min-width: 0;
 }
 
@@ -376,16 +367,16 @@ html.wpa-mode .app-mode-badge {
   right: 1.5rem;
   bottom: 1.5rem;
   z-index: 30;
-  width: 64px;
-  height: 64px;
+  width: 58px;
+  height: 58px;
   border: none;
   border-radius: 999px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  color: #08111f;
+  color: #04110a;
   background: var(--brand-gradient);
-  box-shadow: 0 24px 64px rgba(8, 15, 31, 0.45);
+  box-shadow: 0 18px 36px rgba(8, 15, 31, 0.28);
 }
 
 .mobile-fab-button {

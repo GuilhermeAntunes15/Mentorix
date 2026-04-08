@@ -13,11 +13,11 @@ export function Card({ title, subtitle, actions, style, children, ...props }: Pr
       {...props}
       className="glass-panel"
       style={{
-        borderRadius: 28,
-        padding: '1.25rem',
+        borderRadius: 20,
+        padding: '1rem',
         display: 'flex',
         flexDirection: 'column',
-        gap: '1rem',
+        gap: '0.9rem',
         ...style
       }}
     >
@@ -29,10 +29,10 @@ export function Card({ title, subtitle, actions, style, children, ...props }: Pr
             gap: '1rem',
             alignItems: 'flex-start'
           }}
-        >
+          >
           <div>
-            {title && <h3 style={{ margin: 0, fontSize: '1.05rem' }}>{title}</h3>}
-            {subtitle && <p style={{ margin: '0.3rem 0 0', color: '#94a3b8' }}>{subtitle}</p>}
+            {title && <h3 style={{ margin: 0, fontSize: '1rem' }}>{title}</h3>}
+            {subtitle && <p style={{ margin: '0.25rem 0 0', color: '#94a3b8' }}>{subtitle}</p>}
           </div>
           {actions}
         </header>
