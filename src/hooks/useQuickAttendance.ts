@@ -22,6 +22,10 @@ interface QuickAttendanceLesson {
   status: ChamadaEntity['status'];
 }
 
+function buildStatuses(entries: Array<[string, PresenceStatus]>): Record<string, PresenceStatus> {
+  return Object.fromEntries(entries) as Record<string, PresenceStatus>;
+}
+
 const nameCollator = new Intl.Collator('pt-BR', {
   sensitivity: 'base'
 });
@@ -84,10 +88,10 @@ export function useQuickAttendance(
             return {
               alunoId: relation.alunoId,
               nome: student?.nome ?? 'Aluno',
-              statuses: Object.fromEntries(
+              statuses: buildStatuses(
                 lessons.map((lesson, index) => {
                   const frequency = frequenciesByLesson[index].find((item) => item.alunoId === relation.alunoId);
-                  return [lesson.aula.id, frequency?.status === 'presente' ? 'presente' : 'ausente'];
+                  return [lesson.aula.id, frequency?.status === 'presente' ? 'presente' : 'ausente'] as [string, PresenceStatus];
                 })
               )
             };
@@ -141,8 +145,8 @@ export function useQuickAttendance(
     setRows((currentRows) =>
       currentRows.map((row) => ({
         ...row,
-        statuses: Object.fromEntries(
-          lessons.map((lesson) => [lesson.aula.id, status])
+        statuses: buildStatuses(
+          lessons.map((lesson) => [lesson.aula.id, status] as [string, PresenceStatus])
         )
       }))
     );

@@ -35,7 +35,7 @@ interface LessonSchedulerModalProps {
   removingLessonId?: string | null;
   onClose: () => void;
   onSave: (entries: DraftLesson[]) => Promise<void>;
-  onRemoveOccurrence: (lesson: AulaEntity, date: string) => Promise<void>;
+  onRemoveOccurrence?: (lesson: AulaEntity, date: string) => Promise<void>;
 }
 
 const initialDraftState = {
@@ -366,9 +366,10 @@ export function LessonSchedulerModal({
                         </div>
                         <button
                           type="button"
-                          disabled={removingLessonId === lesson.id}
-                          onClick={() => void onRemoveOccurrence(lesson, day.isoDate)}
+                          onClick={() => void onRemoveOccurrence?.(lesson, day.isoDate)}
                           aria-label={lesson.recorrente ? 'Apagar so hoje' : 'Apagar aula'}
+                          hidden={!onRemoveOccurrence}
+                          disabled={!onRemoveOccurrence || removingLessonId === lesson.id}
                           style={{
                             border: '1px solid rgba(148, 163, 184, 0.16)',
                             background: 'transparent',
