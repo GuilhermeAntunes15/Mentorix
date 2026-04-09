@@ -103,12 +103,14 @@ export async function createManagedAccount({
   // Salvar sessao atual do admin antes de criar o novo usuario
   const { data: { session: adminSession } } = await supabase.auth.getSession();
 
-  // Criar usuario via signUp (isso muda a sessao ativa)
+  // Criar usuario via signUp SEM metadata de role
+  // O trigger handle_new_user criara o profile com role default 'professor'
+  // Depois atualizamos o profile com os dados corretos do Mentorix
   const { data: signUpData, error } = await supabase.auth.signUp({
     email,
     password,
     options: {
-      data: { nome: displayName, role }
+      data: { nome: displayName }
     }
   });
 
@@ -130,24 +132,22 @@ export async function createManagedAccount({
     });
   }
 
-  const userProfile: Omit<UserEntity, 'id' | 'createdAt' | 'updatedAt'> = {
-    professorId: role === 'professor' ? authUid : professorId,
-    authUid,
+  // Aguardar um momento para o trigger criar o profile
+  await new Promise((resolve) => setTimeout(resolve, 500));
+
+  // Atualizar o profile criado pelo trigger com os dados do Mentorix
+  await usersRepository.updateByAuthUid(authUid, {
     role,
     displayName,
-    email,
     username: displayName,
     profileCompleted: role !== 'aluno',
     avatarKey: role === 'aluno' ? '' : 'star',
     linkedStudentId,
     studentSyncKey,
-    targetProfessorId: role === 'professor' ? authUid : professorId
-  };
+    targetProfessorId: role === 'professor' ? authUid : professorId,
+    professorId: role === 'professor' ? authUid : professorId,
+    ...(assignedSubjects?.length ? { assignedSubjects } : {})
+  });
 
-  if (assignedSubjects?.length) {
-    userProfile.assignedSubjects = assignedSubjects;
-  }
-
-  const createdProfile = await usersRepository.createManagedUser(userProfile);
-  return createdProfile;
+  return await usersRepository.getByAuthUid(authUid) as UserEntity;
 }
