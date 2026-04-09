@@ -42,8 +42,8 @@ export function StudentPlannerScreen() {
   const [editingSubject, setEditingSubject] = useState<MateriaPessoalEntity | null>(null);
   const [subjectForm, setSubjectForm] = useState<MateriaPessoalFormValues>(initialSubjectForm);
   const [agendaForm, setAgendaForm] = useState<AgendaPessoalFormValues>(initialAgendaForm);
-  const subjects = useCollectionResource(session?.professorId ?? '', personalSubjectsRepository);
-  const agenda = useCollectionResource(session?.professorId ?? '', personalAgendaRepository);
+  const subjects = useCollectionResource(session?.authUid ?? '', personalSubjectsRepository);
+  const agenda = useCollectionResource(session?.authUid ?? '', personalAgendaRepository);
 
   const ownSubjects = useMemo(
     () => subjects.items.filter((item) => item.userId === session?.authUid).sort((a, b) => a.nome.localeCompare(b.nome)),

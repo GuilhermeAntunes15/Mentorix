@@ -119,23 +119,19 @@ DECLARE
 
 BEGIN
   -- ===========================================
-  -- LIMPEZA: Remover dados antigos do professor
+  -- LIMPEZA: truncar turmas e alunos antes de recriar o seed
   -- ===========================================
-  DELETE FROM mtx_membros_empresa_competicao WHERE professor_id = v_professor_id;
-  DELETE FROM mtx_empresas_competicao WHERE professor_id = v_professor_id;
-  DELETE FROM mtx_aluno_turma WHERE professor_id = v_professor_id;
-  DELETE FROM mtx_alunos WHERE professor_id = v_professor_id;
-  DELETE FROM mtx_turmas WHERE professor_id = v_professor_id;
+  TRUNCATE TABLE mtx_turmas, mtx_alunos RESTART IDENTITY CASCADE;
 
   -- ===========================================
   -- TURMAS
   -- ===========================================
   INSERT INTO mtx_turmas (professor_id, nome, codigo, periodo)
-    VALUES (v_professor_id, '2a Serie A', '2A', '2026')
+    VALUES (v_professor_id, '2A', '2A', '2026')
     RETURNING id INTO v_turma_2a;
 
   INSERT INTO mtx_turmas (professor_id, nome, codigo, periodo)
-    VALUES (v_professor_id, '2a Serie B', '2B', '2026')
+    VALUES (v_professor_id, '2B', '2B', '2026')
     RETURNING id INTO v_turma_2b;
 
   -- ===========================================
