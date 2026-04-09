@@ -9,6 +9,7 @@ import type {
   MateriaPessoalEntity,
   MateriaEntity,
   PerfilAlunoEntity,
+  PontuacaoAlunoEntity,
   QuizEntity,
   ReposicaoEntity,
   TurmaEntity
@@ -62,3 +63,15 @@ export type AvisoMuralFormValues = Pick<
   AvisoMuralEntity,
   'tipo' | 'audiencia' | 'targetProfessorId' | 'turmaId' | 'titulo' | 'mensagem'
 >;
+
+export type PontuacaoAlunoFormValues = Pick<
+  PontuacaoAlunoEntity,
+  'alunoId' | 'turmaId' | 'descricao' | 'pontos' | 'data'
+>;
+
+export type AvaliacaoAlunoFormValues = {
+  alunoId: string;
+  turmaId: string;
+  notaProvaPaulista: number;
+  notaProva: number;
+};

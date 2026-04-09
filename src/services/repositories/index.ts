@@ -12,4 +12,5 @@ export * from '@/services/repositories/quizzesRepository';
 export * from '@/services/repositories/studentProfilesRepository';
 export * from '@/services/repositories/studentsRepository';
 export * from '@/services/repositories/subjectsRepository';
+export * from '@/services/repositories/scoringRepository';
 export * from '@/services/repositories/usersRepository';

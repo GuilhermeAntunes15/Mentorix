@@ -24,6 +24,8 @@ export const TABLES = {
   ENTREGAS_ATIVIDADE: 'mtx_entregas_atividade',
   REPOSICOES: 'mtx_reposicoes',
   ENTREGAS_REPOSICAO: 'mtx_entregas_reposicao',
+  PONTUACOES_ALUNO: 'mtx_pontuacoes_aluno',
+  AVALIACOES_ALUNO: 'mtx_avaliacoes_aluno',
 } as const;
 
 export type TableName = (typeof TABLES)[keyof typeof TABLES];

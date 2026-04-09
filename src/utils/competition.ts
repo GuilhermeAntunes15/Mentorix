@@ -6,6 +6,7 @@ import type {
   EmpresaCompeticaoEntity,
   EntregaAtividadeEntity,
   MembroEmpresaCompeticaoEntity,
+  PontuacaoAlunoEntity,
   QuizEntity,
   TentativaQuizEntity
 } from '@/types';
@@ -29,7 +30,8 @@ function calculateScoreBreakdown({
   atividades,
   entregas,
   quizzes,
-  tentativas
+  tentativas,
+  pontuacoes
 }: {
   empresa: EmpresaCompeticaoEntity;
   membros: MembroEmpresaCompeticaoEntity[];
@@ -38,6 +40,7 @@ function calculateScoreBreakdown({
   entregas: EntregaAtividadeEntity[];
   quizzes: QuizEntity[];
   tentativas: TentativaQuizEntity[];
+  pontuacoes: PontuacaoAlunoEntity[];
 }): CompetitionScoreBreakdown {
   const memberIds = membros.map((membro) => membro.alunoId);
   const atividadeIds = new Set(atividades.map((atividade) => atividade.id));
@@ -74,10 +77,17 @@ function calculateScoreBreakdown({
   const taxaQuizzesCorretos = totalQuizzesEsperados ? totalQuizzesCorretos / totalQuizzesEsperados : 0;
   const quizzesCorretos = clampScore(taxaQuizzesCorretos * 15, 15);
 
+  const relevantPontuacoes = pontuacoes.filter(
+    (p) => memberIds.includes(p.alunoId)
+  );
+  const pontosIndividuais = relevantPontuacoes.reduce(
+    (sum, p) => sum + p.pontos, 0
+  );
+
   const comportamento = empresa.pontosComportamento;
   const extras = empresa.pontosExtras;
   const total =
-    atividadesEquipe + mediaAtividades + quizzesFeitos + quizzesCorretos + comportamento + extras;
+    atividadesEquipe + mediaAtividades + quizzesFeitos + quizzesCorretos + comportamento + extras + pontosIndividuais;
 
   return {
     atividadesEquipe,
@@ -86,6 +96,7 @@ function calculateScoreBreakdown({
     quizzesCorretos,
     comportamento,
     extras,
+    pontosIndividuais,
     total,
     mediaNotasAtividades,
     taxaAtividadesEquipe,
@@ -101,7 +112,8 @@ export function buildCompetitionStandings({
   atividades,
   entregas,
   quizzes,
-  tentativas
+  tentativas,
+  pontuacoes
 }: {
   empresas: EmpresaCompeticaoEntity[];
   membros: MembroEmpresaCompeticaoEntity[];
@@ -110,6 +122,7 @@ export function buildCompetitionStandings({
   entregas: EntregaAtividadeEntity[];
   quizzes: QuizEntity[];
   tentativas: TentativaQuizEntity[];
+  pontuacoes: PontuacaoAlunoEntity[];
 }) {
   const standings: CompetitionCompanyStanding[] = empresas.map((empresa) => {
     const companyMembers = membros.filter((membro) => membro.empresaId === empresa.id);
@@ -129,7 +142,8 @@ export function buildCompetitionStandings({
         atividades,
         entregas,
         quizzes,
-        tentativas
+        tentativas,
+        pontuacoes
       })
     };
   });

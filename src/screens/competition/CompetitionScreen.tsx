@@ -1,4 +1,4 @@
-import { Crown, Medal, Pencil, Plus, Shield, Sparkles, Target, Trash2, Trophy, Users, Zap } from 'lucide-react';
+import { Crown, Medal, Pencil, Plus, Shield, Sparkles, Star, Target, Trash2, Trophy, Users, Zap } from 'lucide-react';
 import { type CSSProperties, useEffect, useMemo, useState } from 'react';
 import { Badge } from '@/components/common/Badge';
 import { Button } from '@/components/common/Button';
@@ -21,14 +21,19 @@ import {
   quizAttemptsRepository,
   quizzesRepository,
   studentClassRepository,
+  studentEvaluationsRepository,
+  studentScoresRepository,
   studentsRepository
 } from '@/services/repositories';
 import { buildCompetitionStandings } from '@/utils/competition';
+import { calculateFinalGrade, MAX_PONTUACAO_INDIVIDUAL } from '@/utils/studentGrade';
 import type {
+  AvaliacaoAlunoEntity,
   CompetitionViewMode,
   EmpresaCompeticaoEntity,
   EmpresaCompeticaoFormValues,
-  MembroEmpresaCompeticaoEntity
+  MembroEmpresaCompeticaoEntity,
+  PontuacaoAlunoEntity
 } from '@/types';
 
 const initialCompanyForm: EmpresaCompeticaoFormValues = {
@@ -49,6 +54,99 @@ function scoreDescription(score: number, max: number, emptyLabel: string) {
   return `${score}/${max} pts`;
 }
 
+function EvaluationRow({
+  studentName,
+  studentId,
+  defaultProvaPaulista,
+  defaultProva,
+  pontuacaoPercent,
+  notaFinal,
+  totalPts,
+  saving,
+  onSave
+}: {
+  studentName: string;
+  studentId: string;
+  defaultProvaPaulista: number;
+  defaultProva: number;
+  pontuacaoPercent: number;
+  notaFinal: number;
+  totalPts: number;
+  saving: boolean;
+  onSave: (alunoId: string, notaProvaPaulista: number, notaProva: number) => void;
+}) {
+  const [provaPaulista, setProvaPaulista] = useState(defaultProvaPaulista);
+  const [prova, setProva] = useState(defaultProva);
+
+  const liveNotaFinal = calculateFinalGrade({
+    notaProvaPaulista: provaPaulista,
+    notaProva: prova,
+    totalPontosIndividuais: totalPts
+  });
+
+  return (
+    <tr style={{ borderBottom: '1px solid rgba(148, 163, 184, 0.08)' }}>
+      <td style={{ padding: '0.5rem 0.75rem' }}>{studentName}</td>
+      <td style={{ padding: '0.5rem 0.75rem' }}>
+        <input
+          type="number"
+          step="0.1"
+          min="0"
+          max="10"
+          value={provaPaulista}
+          onChange={(e) => setProvaPaulista(Number(e.target.value))}
+          style={{
+            width: 70,
+            padding: '0.3rem 0.5rem',
+            borderRadius: 8,
+            border: '1px solid rgba(148, 163, 184, 0.2)',
+            background: 'rgba(15, 23, 42, 0.6)',
+            color: '#e2e8f0',
+            fontSize: '0.85rem'
+          }}
+        />
+      </td>
+      <td style={{ padding: '0.5rem 0.75rem' }}>
+        <input
+          type="number"
+          step="0.1"
+          min="0"
+          max="10"
+          value={prova}
+          onChange={(e) => setProva(Number(e.target.value))}
+          style={{
+            width: 70,
+            padding: '0.3rem 0.5rem',
+            borderRadius: 8,
+            border: '1px solid rgba(148, 163, 184, 0.2)',
+            background: 'rgba(15, 23, 42, 0.6)',
+            color: '#e2e8f0',
+            fontSize: '0.85rem'
+          }}
+        />
+      </td>
+      <td style={{ padding: '0.5rem 0.75rem', color: '#94a3b8' }}>
+        {totalPts}/{MAX_PONTUACAO_INDIVIDUAL} ({pontuacaoPercent.toFixed(0)}%)
+      </td>
+      <td style={{ padding: '0.5rem 0.75rem' }}>
+        <Badge tone={liveNotaFinal >= 6 ? 'success' : liveNotaFinal >= 4 ? 'warning' : 'danger'}>
+          {liveNotaFinal.toFixed(1)}
+        </Badge>
+      </td>
+      <td style={{ padding: '0.5rem 0.75rem' }}>
+        <Button
+          variant="secondary"
+          onClick={() => onSave(studentId, provaPaulista, prova)}
+          disabled={saving}
+          style={{ padding: '0.3rem 0.75rem', fontSize: '0.8rem' }}
+        >
+          {saving ? 'Salvando...' : 'Salvar'}
+        </Button>
+      </td>
+    </tr>
+  );
+}
+
 export function CompetitionScreen() {
   const { professorId } = useProfessor();
   const { session } = useSession();
@@ -60,6 +158,9 @@ export function CompetitionScreen() {
   const [selectedCompanyId, setSelectedCompanyId] = useState<string | null>(null);
   const [memberStudentId, setMemberStudentId] = useState('');
   const [companyForm, setCompanyForm] = useState<EmpresaCompeticaoFormValues>(initialCompanyForm);
+  const [scoreModalOpen, setScoreModalOpen] = useState(false);
+  const [scoreForm, setScoreForm] = useState({ alunoId: '', descricao: '', pontos: 0, data: new Date().toISOString().split('T')[0] });
+  const [evalSaving, setEvalSaving] = useState<string | null>(null);
 
   const classes = useCollectionResource(professorId, classesRepository);
   const students = useCollectionResource(professorId, studentsRepository);
@@ -70,6 +171,8 @@ export function CompetitionScreen() {
   const activityDeliveries = useCollectionResource(professorId, activityDeliveriesRepository);
   const quizzes = useCollectionResource(professorId, quizzesRepository);
   const quizAttempts = useCollectionResource(professorId, quizAttemptsRepository);
+  const studentScores = useCollectionResource(professorId, studentScoresRepository);
+  const studentEvaluations = useCollectionResource(professorId, studentEvaluationsRepository);
 
   const orderedClasses = useMemo(
     () => {
@@ -126,6 +229,14 @@ export function CompetitionScreen() {
     () => quizzes.items.filter((quiz) => quiz.turmaId === selectedClassId),
     [quizzes.items, selectedClassId]
   );
+  const scoresInClass = useMemo(
+    () => studentScores.items.filter((score) => score.turmaId === selectedClassId),
+    [studentScores.items, selectedClassId]
+  );
+  const evaluationsInClass = useMemo(
+    () => studentEvaluations.items.filter((evaluation) => evaluation.turmaId === selectedClassId),
+    [studentEvaluations.items, selectedClassId]
+  );
   const standings = useMemo(
     () =>
       buildCompetitionStandings({
@@ -135,7 +246,8 @@ export function CompetitionScreen() {
         atividades: activitiesInClass,
         entregas: activityDeliveries.items,
         quizzes: quizzesInClass,
-        tentativas: quizAttempts.items
+        tentativas: quizAttempts.items,
+        pontuacoes: scoresInClass
       }),
     [
       activitiesInClass,
@@ -144,6 +256,7 @@ export function CompetitionScreen() {
       membersInClass,
       quizAttempts.items,
       quizzesInClass,
+      scoresInClass,
       studentsInClass
     ]
   );
@@ -184,7 +297,9 @@ export function CompetitionScreen() {
     activities.loading ||
     activityDeliveries.loading ||
     quizzes.loading ||
-    quizAttempts.loading;
+    quizAttempts.loading ||
+    studentScores.loading ||
+    studentEvaluations.loading;
   const error =
     classes.error ||
     students.error ||
@@ -194,7 +309,9 @@ export function CompetitionScreen() {
     activities.error ||
     activityDeliveries.error ||
     quizzes.error ||
-    quizAttempts.error;
+    quizAttempts.error ||
+    studentScores.error ||
+    studentEvaluations.error;
 
   function openCreateCompany() {
     setEditingCompany(null);
@@ -273,6 +390,49 @@ export function CompetitionScreen() {
     if (selectedStanding?.empresa.liderAlunoId === member.alunoId) {
       await companies.updateItem(selectedStanding.empresa.id, { liderAlunoId: '' });
     }
+  }
+
+  async function handleSubmitScore(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!scoreForm.alunoId || !scoreForm.descricao) return;
+    await studentScores.createItem({
+      alunoId: scoreForm.alunoId,
+      turmaId: selectedClassId,
+      descricao: scoreForm.descricao,
+      pontos: scoreForm.pontos,
+      data: scoreForm.data
+    });
+    setScoreForm({ alunoId: '', descricao: '', pontos: 0, data: new Date().toISOString().split('T')[0] });
+    setScoreModalOpen(false);
+  }
+
+  async function handleDeleteScore(score: PontuacaoAlunoEntity) {
+    await studentScores.removeItem(score.id);
+  }
+
+  async function handleSaveEvaluation(alunoId: string, notaProvaPaulista: number, notaProva: number) {
+    setEvalSaving(alunoId);
+    try {
+      await studentEvaluationsRepository.upsertEvaluation(professorId, {
+        alunoId,
+        turmaId: selectedClassId,
+        notaProvaPaulista,
+        notaProva
+      });
+      await studentEvaluations.reload();
+    } finally {
+      setEvalSaving(null);
+    }
+  }
+
+  function getStudentTotalPoints(alunoId: string) {
+    return scoresInClass
+      .filter((score) => score.alunoId === alunoId)
+      .reduce((sum, score) => sum + score.pontos, 0);
+  }
+
+  function getStudentEvaluation(alunoId: string): AvaliacaoAlunoEntity | undefined {
+    return evaluationsInClass.find((evaluation) => evaluation.alunoId === alunoId);
   }
 
   return (
@@ -366,6 +526,118 @@ export function CompetitionScreen() {
             </Card>
           ))}
         </section>
+      )}
+
+      {!loading && !error && selectedClassId && mode === 'professor' && (
+        <Card
+          title="Pontuacao Individual"
+          subtitle="Registre pontos individuais para alunos. Estes pontos somam no total do grupo na competicao."
+          actions={
+            <Button onClick={() => setScoreModalOpen(true)}>
+              <Star size={18} /> Dar pontos
+            </Button>
+          }
+        >
+          {!studentsInClass.length ? (
+            <EmptyState title="Sem alunos" description="Nenhum aluno cadastrado nesta turma." />
+          ) : (
+            <div style={{ display: 'grid', gap: '0.75rem' }}>
+              {studentsInClass.map((student) => {
+                const total = getStudentTotalPoints(student.id);
+                const studentScoresList = scoresInClass
+                  .filter((score) => score.alunoId === student.id)
+                  .sort((a, b) => b.data.localeCompare(a.data));
+                return (
+                  <div
+                    key={student.id}
+                    style={{
+                      padding: '0.9rem 1rem',
+                      borderRadius: 20,
+                      background: 'rgba(15, 23, 42, 0.56)',
+                      border: '1px solid rgba(148, 163, 184, 0.1)',
+                      display: 'grid',
+                      gap: '0.5rem'
+                    }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
+                      <strong>{student.nome}</strong>
+                      <Badge tone={total > 0 ? 'success' : 'neutral'}>{total} pts</Badge>
+                    </div>
+                    {studentScoresList.length > 0 && (
+                      <div style={{ display: 'grid', gap: '0.25rem' }}>
+                        {studentScoresList.slice(0, 5).map((score) => (
+                          <div
+                            key={score.id}
+                            style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.85rem', color: '#94a3b8', gap: '0.5rem' }}
+                          >
+                            <span>{score.data} - {score.descricao}</span>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                              <Badge tone="info">{score.pontos > 0 ? '+' : ''}{score.pontos}</Badge>
+                              <Button variant="danger" onClick={() => void handleDeleteScore(score)} style={{ padding: '0.2rem 0.4rem', fontSize: '0.75rem' }}>
+                                <Trash2 size={12} />
+                              </Button>
+                            </div>
+                          </div>
+                        ))}
+                        {studentScoresList.length > 5 && (
+                          <span style={{ fontSize: '0.8rem', color: '#64748b' }}>...e mais {studentScoresList.length - 5} registro(s)</span>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </Card>
+      )}
+
+      {!loading && !error && selectedClassId && mode === 'professor' && !!studentsInClass.length && (
+        <Card title="Avaliacoes - Nota Final" subtitle="30% Prova Paulista + 30% Prova + 40% Pontuacao Individual (max 100 pts = nota 10)">
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
+              <thead>
+                <tr style={{ borderBottom: '1px solid rgba(148, 163, 184, 0.2)', textAlign: 'left' }}>
+                  <th style={{ padding: '0.5rem 0.75rem', color: '#94a3b8' }}>Aluno</th>
+                  <th style={{ padding: '0.5rem 0.75rem', color: '#94a3b8' }}>Prova Paulista</th>
+                  <th style={{ padding: '0.5rem 0.75rem', color: '#94a3b8' }}>Prova</th>
+                  <th style={{ padding: '0.5rem 0.75rem', color: '#94a3b8' }}>Pontuacao (%)</th>
+                  <th style={{ padding: '0.5rem 0.75rem', color: '#94a3b8' }}>Nota Final</th>
+                  <th style={{ padding: '0.5rem 0.75rem', color: '#94a3b8' }}></th>
+                </tr>
+              </thead>
+              <tbody>
+                {studentsInClass.map((student) => {
+                  const evaluation = getStudentEvaluation(student.id);
+                  const totalPts = getStudentTotalPoints(student.id);
+                  const pontuacaoPercent = Math.min(100, (totalPts / MAX_PONTUACAO_INDIVIDUAL) * 100);
+                  const defaultProvaPaulista = evaluation?.notaProvaPaulista ?? 0;
+                  const defaultProva = evaluation?.notaProva ?? 0;
+                  const notaFinal = calculateFinalGrade({
+                    notaProvaPaulista: defaultProvaPaulista,
+                    notaProva: defaultProva,
+                    totalPontosIndividuais: totalPts
+                  });
+
+                  return (
+                    <EvaluationRow
+                      key={student.id}
+                      studentName={student.nome}
+                      studentId={student.id}
+                      defaultProvaPaulista={defaultProvaPaulista}
+                      defaultProva={defaultProva}
+                      pontuacaoPercent={pontuacaoPercent}
+                      notaFinal={notaFinal}
+                      totalPts={totalPts}
+                      saving={evalSaving === student.id}
+                      onSave={handleSaveEvaluation}
+                    />
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </Card>
       )}
 
       {!loading && !error && selectedClassId && mode === 'aluno' && !standings.length && (
@@ -498,6 +770,10 @@ export function CompetitionScreen() {
                     <span>Extras</span>
                     <strong>{standing.pontuacao.extras}</strong>
                   </div>
+                  <div className="competition-point-chip">
+                    <span>Individuais</span>
+                    <strong>{standing.pontuacao.pontosIndividuais}</strong>
+                  </div>
                 </div>
 
                 <div className="competition-progress-stack">
@@ -548,6 +824,91 @@ export function CompetitionScreen() {
               </div>
             </Card>
           )}
+
+          {session?.alunoId && (() => {
+            const myScores = scoresInClass
+              .filter((score) => score.alunoId === session.alunoId)
+              .sort((a, b) => b.data.localeCompare(a.data));
+            const myTotalPts = myScores.reduce((sum, s) => sum + s.pontos, 0);
+            const myEval = evaluationsInClass.find((e) => e.alunoId === session.alunoId);
+            const myNotaFinal = myEval
+              ? calculateFinalGrade({
+                  notaProvaPaulista: myEval.notaProvaPaulista ?? 0,
+                  notaProva: myEval.notaProva ?? 0,
+                  totalPontosIndividuais: myTotalPts
+                })
+              : null;
+
+            return (
+              <>
+                <Card
+                  title="Seus pontos individuais"
+                  subtitle={`Total acumulado: ${myTotalPts} de ${MAX_PONTUACAO_INDIVIDUAL} pontos`}
+                  actions={<Badge tone={myTotalPts > 0 ? 'success' : 'neutral'}>{myTotalPts} pts</Badge>}
+                >
+                  {myScores.length ? (
+                    <div style={{ display: 'grid', gap: '0.5rem' }}>
+                      {myScores.map((score) => (
+                        <div
+                          key={score.id}
+                          style={{
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            padding: '0.5rem 0.75rem',
+                            borderRadius: 12,
+                            background: 'rgba(15, 23, 42, 0.56)',
+                            border: '1px solid rgba(148, 163, 184, 0.08)',
+                            fontSize: '0.9rem',
+                            color: '#cbd5e1'
+                          }}
+                        >
+                          <span>{score.data} - {score.descricao}</span>
+                          <Badge tone="info">{score.pontos > 0 ? '+' : ''}{score.pontos}</Badge>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <EmptyState title="Sem pontos ainda" description="Voce ainda nao recebeu pontos individuais nesta turma." />
+                  )}
+                </Card>
+
+                {myEval && (
+                  <Card title="Sua avaliacao" subtitle="Notas e nota final calculada automaticamente.">
+                    <div style={{ display: 'grid', gap: '0.5rem' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', color: '#cbd5e1' }}>
+                        <span>Prova Paulista (30%)</span>
+                        <strong>{myEval.notaProvaPaulista ?? '-'}</strong>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', color: '#cbd5e1' }}>
+                        <span>Prova (30%)</span>
+                        <strong>{myEval.notaProva ?? '-'}</strong>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', color: '#cbd5e1' }}>
+                        <span>Pontuacao Individual (40%)</span>
+                        <strong>{myTotalPts}/{MAX_PONTUACAO_INDIVIDUAL}</strong>
+                      </div>
+                      <div
+                        style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          padding: '0.5rem 0',
+                          borderTop: '1px solid rgba(148, 163, 184, 0.15)',
+                          marginTop: '0.25rem'
+                        }}
+                      >
+                        <strong style={{ color: '#e2e8f0' }}>Nota Final</strong>
+                        <Badge tone={myNotaFinal !== null && myNotaFinal >= 6 ? 'success' : 'warning'}>
+                          {myNotaFinal?.toFixed(1) ?? '-'}
+                        </Badge>
+                      </div>
+                    </div>
+                  </Card>
+                )}
+              </>
+            );
+          })()}
         </section>
       )}
 
@@ -635,6 +996,35 @@ export function CompetitionScreen() {
                 </p>
               </Card>
             </div>
+
+            <Card title="Pontos individuais dos membros" actions={<Badge tone="info">{selectedStanding.pontuacao.pontosIndividuais} pts</Badge>}>
+              <div style={{ display: 'grid', gap: '0.5rem' }}>
+                {selectedStanding.alunos.map((student) => {
+                  const pts = getStudentTotalPoints(student.id);
+                  return (
+                    <div
+                      key={student.id}
+                      style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        padding: '0.5rem 0.75rem',
+                        borderRadius: 12,
+                        background: 'rgba(15, 23, 42, 0.56)',
+                        border: '1px solid rgba(148, 163, 184, 0.08)',
+                        color: '#cbd5e1'
+                      }}
+                    >
+                      <span>{student.nome}</span>
+                      <Badge tone={pts > 0 ? 'success' : 'neutral'}>{pts} pts</Badge>
+                    </div>
+                  );
+                })}
+                {!selectedStanding.alunos.length && (
+                  <p style={{ margin: 0, color: '#94a3b8' }}>Nenhum membro na empresa.</p>
+                )}
+              </div>
+            </Card>
 
             <Card title="Ajustes manuais" subtitle="Comportamento varia em passos de 5. Pontos extras variam de 1 em 1.">
               <div style={{ display: 'grid', gap: '0.75rem' }}>
@@ -778,6 +1168,50 @@ export function CompetitionScreen() {
           />
           <Button type="submit" disabled={!memberStudentId}>
             <Sparkles size={18} /> Adicionar a empresa
+          </Button>
+        </form>
+      </Modal>
+
+      <Modal
+        open={scoreModalOpen}
+        onClose={() => setScoreModalOpen(false)}
+        title="Dar pontos a um aluno"
+        subtitle="Registre pontos individuais. Eles somam no total da empresa na competicao."
+      >
+        <form onSubmit={handleSubmitScore} style={{ display: 'grid', gap: '1rem', marginTop: '1rem' }}>
+          <Select
+            label="Aluno"
+            value={scoreForm.alunoId}
+            onChange={(event) => setScoreForm({ ...scoreForm, alunoId: event.target.value })}
+            options={[
+              { value: '', label: 'Selecione um aluno' },
+              ...studentsInClass.map((student) => ({ value: student.id, label: student.nome }))
+            ]}
+          />
+          <Input
+            label="Descricao"
+            value={scoreForm.descricao}
+            onChange={(event) => setScoreForm({ ...scoreForm, descricao: event.target.value })}
+            required
+          />
+          <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+            <Input
+              label="Pontos"
+              type="number"
+              value={scoreForm.pontos}
+              onChange={(event) => setScoreForm({ ...scoreForm, pontos: Number(event.target.value) })}
+              required
+            />
+            <Input
+              label="Data"
+              type="date"
+              value={scoreForm.data}
+              onChange={(event) => setScoreForm({ ...scoreForm, data: event.target.value })}
+              required
+            />
+          </div>
+          <Button type="submit" disabled={!scoreForm.alunoId || !scoreForm.descricao}>
+            <Star size={18} /> Registrar pontos
           </Button>
         </form>
       </Modal>

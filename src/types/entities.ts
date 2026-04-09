@@ -276,6 +276,21 @@ export interface EntregaReposicaoEntity extends BaseEntity {
   entregueEm?: ISODateString;
 }
 
+export interface PontuacaoAlunoEntity extends BaseEntity {
+  alunoId: EntityId;
+  turmaId: EntityId;
+  descricao: string;
+  pontos: number;
+  data: ISODateString;
+}
+
+export interface AvaliacaoAlunoEntity extends BaseEntity {
+  alunoId: EntityId;
+  turmaId: EntityId;
+  notaProvaPaulista?: number;
+  notaProva?: number;
+}
+
 export interface DayLessonView {
   dataReferencia: ISODateString;
   aula: AulaEntity;
@@ -319,6 +334,7 @@ export interface CompetitionScoreBreakdown {
   quizzesCorretos: number;
   comportamento: number;
   extras: number;
+  pontosIndividuais: number;
   total: number;
   mediaNotasAtividades: number;
   taxaAtividadesEquipe: number;
