@@ -1,17 +1,24 @@
+import { supabase } from '@/services/supabase/client';
 import { BaseRepository } from '@/services/repositories/baseRepository';
-import { COLLECTIONS } from '@/database/collections';
+import { TABLES } from '@/database/collections';
 import type { AnotacaoAulaEntity } from '@/types';
 
 class LessonNotesRepository extends BaseRepository<AnotacaoAulaEntity> {
   constructor() {
-    super(COLLECTIONS.anotacoesAula);
+    super(TABLES.ANOTACOES_AULA);
   }
 
   async getByLessonAndDate(professorId: string, aulaId: string, dataReferencia: string) {
-    const items = await this.listByProfessor(professorId);
-    return (
-      items.find((item) => item.aulaId === aulaId && item.dataReferencia === dataReferencia) ?? null
-    );
+    const { data, error } = await supabase
+      .from(this.tableName)
+      .select('*')
+      .eq('professor_id', professorId)
+      .eq('aula_id', aulaId)
+      .eq('data_referencia', dataReferencia)
+      .maybeSingle();
+
+    if (error) throw new Error(error.message);
+    return data ? this.mapRow(data as Record<string, unknown>) : null;
   }
 
   async saveForLesson(professorId: string, aulaId: string, dataReferencia: string, conteudoHtml: string) {

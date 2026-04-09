@@ -1,25 +1,28 @@
-import { where } from 'firebase/firestore';
 import { BaseRepository } from '@/services/repositories/baseRepository';
-import { COLLECTIONS } from '@/database/collections';
+import { TABLES } from '@/database/collections';
 import type { EmpresaCompeticaoEntity, MembroEmpresaCompeticaoEntity } from '@/types';
 
 class CompetitionCompaniesRepository extends BaseRepository<EmpresaCompeticaoEntity> {
   constructor() {
-    super(COLLECTIONS.empresasCompeticao);
+    super(TABLES.EMPRESAS_COMPETICAO);
   }
 
   listByClass(professorId: string, turmaId: string) {
-    return this.listByProfessor(professorId, [where('turmaId', '==', turmaId)]);
+    return this.listByProfessor(professorId, [
+      { column: 'turma_id', operator: 'eq', value: turmaId }
+    ]);
   }
 }
 
 class CompetitionMembersRepository extends BaseRepository<MembroEmpresaCompeticaoEntity> {
   constructor() {
-    super(COLLECTIONS.membrosEmpresaCompeticao);
+    super(TABLES.MEMBROS_EMPRESA_COMPETICAO);
   }
 
   listByCompany(professorId: string, empresaId: string) {
-    return this.listByProfessor(professorId, [where('empresaId', '==', empresaId)]);
+    return this.listByProfessor(professorId, [
+      { column: 'empresa_id', operator: 'eq', value: empresaId }
+    ]);
   }
 }
 

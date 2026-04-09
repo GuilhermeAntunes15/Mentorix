@@ -1,40 +1,24 @@
-import {
-  addDoc,
-  collection,
-  doc,
-  getDocs,
-  query,
-  updateDoc,
-  where,
-  writeBatch
-} from 'firebase/firestore';
+import { supabase } from '@/services/supabase/client';
 import { BaseRepository } from '@/services/repositories/baseRepository';
-import { COLLECTIONS } from '@/database/collections';
-import { db } from '@/services/firebase/client';
-import { createEntityPayload } from '@/utils/firestore';
+import { TABLES } from '@/database/collections';
+import { toCamelCase, toSnakeCase } from '@/utils/caseConverter';
 import type { ChamadaEntity, FrequenciaEntity, PresenceStatus } from '@/types';
-
-function ensureDb() {
-  if (!db) {
-    throw new Error('Firebase nao configurado. Preencha o arquivo .env para habilitar persistencia.');
-  }
-
-  return db;
-}
 
 class AttendanceRepository extends BaseRepository<ChamadaEntity> {
   constructor() {
-    super(COLLECTIONS.chamadas);
+    super(TABLES.CHAMADAS);
   }
 
   listByLesson(professorId: string, aulaId: string) {
-    return this.listByProfessor(professorId, [where('aulaId', '==', aulaId)]);
+    return this.listByProfessor(professorId, [
+      { column: 'aula_id', operator: 'eq', value: aulaId }
+    ]);
   }
 
   async getByLessonAndDate(professorId: string, aulaId: string, date: string) {
     const list = await this.listByProfessor(professorId, [
-      where('aulaId', '==', aulaId),
-      where('dataReferencia', '==', date)
+      { column: 'aula_id', operator: 'eq', value: aulaId },
+      { column: 'data_referencia', operator: 'eq', value: date }
     ]);
     return list[0] ?? null;
   }
@@ -42,15 +26,19 @@ class AttendanceRepository extends BaseRepository<ChamadaEntity> {
 
 class FrequencyRepository extends BaseRepository<FrequenciaEntity> {
   constructor() {
-    super(COLLECTIONS.frequencias);
+    super(TABLES.FREQUENCIAS);
   }
 
   listByAttendance(professorId: string, chamadaId: string) {
-    return this.listByProfessor(professorId, [where('chamadaId', '==', chamadaId)]);
+    return this.listByProfessor(professorId, [
+      { column: 'chamada_id', operator: 'eq', value: chamadaId }
+    ]);
   }
 
   listByStudent(professorId: string, alunoId: string) {
-    return this.listByProfessor(professorId, [where('alunoId', '==', alunoId)]);
+    return this.listByProfessor(professorId, [
+      { column: 'aluno_id', operator: 'eq', value: alunoId }
+    ]);
   }
 
   async upsertMany(
@@ -59,63 +47,36 @@ class FrequencyRepository extends BaseRepository<FrequenciaEntity> {
     aulaId: string,
     rows: Array<{ alunoId: string; status: PresenceStatus }>
   ) {
-    const instance = ensureDb();
-
-    const existingSnapshot = await getDocs(
-      query(
-        collection(instance, COLLECTIONS.frequencias),
-        where('professorId', '==', professorId),
-        where('chamadaId', '==', chamadaId)
-      )
-    );
-
-    const existingByStudent = new Map(existingSnapshot.docs.map((item) => [item.data().alunoId as string, item]));
-    const batch = writeBatch(instance);
     const timestamp = new Date().toISOString();
 
-    rows.forEach((row) => {
-      const existing = existingByStudent.get(row.alunoId);
+    const payloads = rows.map((row) =>
+      toSnakeCase({
+        professorId,
+        chamadaId,
+        aulaId,
+        alunoId: row.alunoId,
+        status: row.status,
+        updatedAt: timestamp,
+      } as unknown as Record<string, unknown>)
+    );
 
-      if (existing) {
-        batch.update(existing.ref, {
-          status: row.status,
-          updatedAt: timestamp
-        });
-        return;
-      }
+    const { error } = await supabase
+      .from(this.tableName)
+      .upsert(payloads, { onConflict: 'chamada_id,aluno_id' });
 
-      const reference = doc(collection(instance, COLLECTIONS.frequencias));
-      batch.set(
-        reference,
-        createEntityPayload({
-          professorId,
-          chamadaId,
-          aulaId,
-          alunoId: row.alunoId,
-          status: row.status,
-          createdAt: timestamp,
-          updatedAt: timestamp
-        })
-      );
-    });
-
-    await batch.commit();
+    if (error) throw new Error(error.message);
   }
 
   async markAllStatus(chamadaId: string, status: PresenceStatus) {
-    const instance = ensureDb();
-
-    const snapshot = await getDocs(query(collection(instance, COLLECTIONS.frequencias), where('chamadaId', '==', chamadaId)));
-    const batch = writeBatch(instance);
-
-    snapshot.forEach((item) => {
-      batch.update(item.ref, {
+    const { error } = await supabase
+      .from(this.tableName)
+      .update({
         status,
-        updatedAt: new Date().toISOString()
-      });
-    });
+        updated_at: new Date().toISOString()
+      })
+      .eq('chamada_id', chamadaId);
 
-    await batch.commit();
+    if (error) throw new Error(error.message);
   }
 }
 
@@ -124,11 +85,10 @@ async function createAttendance(
   aulaId: string,
   date: string,
   retroativa: boolean
-) {
-  const instance = ensureDb();
-
+): Promise<ChamadaEntity> {
   const timestamp = new Date().toISOString();
-  const payload = createEntityPayload({
+
+  const payload = toSnakeCase({
     professorId,
     aulaId,
     dataReferencia: date,
@@ -136,19 +96,28 @@ async function createAttendance(
     status: 'em_andamento' as const,
     createdAt: timestamp,
     updatedAt: timestamp
-  });
+  } as unknown as Record<string, unknown>);
 
-  const reference = await addDoc(collection(instance, COLLECTIONS.chamadas), payload);
-  return { id: reference.id, ...payload } as ChamadaEntity;
+  const { data, error } = await supabase
+    .from(TABLES.CHAMADAS)
+    .insert(payload)
+    .select()
+    .single();
+
+  if (error) throw new Error(error.message);
+  return toCamelCase<ChamadaEntity>(data as Record<string, unknown>);
 }
 
 async function updateAttendanceStatus(chamadaId: string, status: ChamadaEntity['status']) {
-  const instance = ensureDb();
+  const { error } = await supabase
+    .from(TABLES.CHAMADAS)
+    .update({
+      status,
+      updated_at: new Date().toISOString()
+    })
+    .eq('id', chamadaId);
 
-  await updateDoc(doc(instance, COLLECTIONS.chamadas, chamadaId), {
-    status,
-    updatedAt: new Date().toISOString()
-  });
+  if (error) throw new Error(error.message);
 }
 
 export const attendanceRepository = new AttendanceRepository();

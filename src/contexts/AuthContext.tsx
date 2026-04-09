@@ -53,7 +53,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const unsubscribe = subscribeToAuthState((user) => {
       setLoading(true);
-      void syncProfile(user?.uid ?? null);
+      void syncProfile(user?.id ?? null);
     });
 
     return unsubscribe;

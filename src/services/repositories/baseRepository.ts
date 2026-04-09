@@ -1,83 +1,148 @@
-import {
-  addDoc,
-  collection,
-  deleteDoc,
-  doc,
-  getDoc,
-  getDocs,
-  query,
-  type QueryConstraint,
-  updateDoc,
-  where
-} from 'firebase/firestore';
-import { db } from '@/services/firebase/client';
-import { createEntityPayload, stripUndefined } from '@/utils/firestore';
+import { supabase } from '@/services/supabase/client';
+import { toSnakeCase, toCamelCase, toCamelCaseArray } from '@/utils/caseConverter';
 import type { BaseEntity } from '@/types';
 
 type EntityInput<TEntity extends BaseEntity> = Omit<TEntity, 'id' | 'professorId' | 'createdAt' | 'updatedAt'>;
 type EntityPatch<TEntity extends BaseEntity> = Partial<EntityInput<TEntity>>;
 
-export abstract class BaseRepository<TEntity extends BaseEntity> {
-  protected constructor(private readonly collectionName: string) {}
+export interface SupabaseFilter {
+  column: string;
+  operator: 'eq' | 'neq' | 'gt' | 'gte' | 'lt' | 'lte' | 'in' | 'contains';
+  value: unknown;
+}
 
-  protected ensureDb() {
-    if (!db) {
-      throw new Error('Firebase nao configurado. Preencha o arquivo .env para habilitar persistencia.');
+export abstract class BaseRepository<TEntity extends BaseEntity> {
+  protected constructor(protected readonly tableName: string) {}
+
+  protected mapRow(row: Record<string, unknown>): TEntity {
+    return toCamelCase<TEntity>(row);
+  }
+
+  protected mapRows(rows: Record<string, unknown>[]): TEntity[] {
+    return toCamelCaseArray<TEntity>(rows);
+  }
+
+  protected toDbPayload(data: Record<string, unknown>): Record<string, unknown> {
+    return toSnakeCase(data as Record<string, unknown>);
+  }
+
+  protected applyFilters(
+    queryBuilder: ReturnType<typeof supabase.from>,
+    filters: SupabaseFilter[]
+  ) {
+    let q = queryBuilder as unknown as ReturnType<ReturnType<typeof supabase.from>['select']>;
+    for (const f of filters) {
+      switch (f.operator) {
+        case 'eq':
+          q = q.eq(f.column, f.value) as typeof q;
+          break;
+        case 'neq':
+          q = q.neq(f.column, f.value) as typeof q;
+          break;
+        case 'gt':
+          q = q.gt(f.column, f.value) as typeof q;
+          break;
+        case 'gte':
+          q = q.gte(f.column, f.value) as typeof q;
+          break;
+        case 'lt':
+          q = q.lt(f.column, f.value) as typeof q;
+          break;
+        case 'lte':
+          q = q.lte(f.column, f.value) as typeof q;
+          break;
+        case 'in':
+          q = q.in(f.column, f.value as unknown[]) as typeof q;
+          break;
+        case 'contains':
+          q = q.contains(f.column, f.value as unknown[]) as typeof q;
+          break;
+      }
+    }
+    return q;
+  }
+
+  async listByProfessor(professorId: string, filters: SupabaseFilter[] = []): Promise<TEntity[]> {
+    let q = supabase.from(this.tableName).select('*').eq('professor_id', professorId);
+
+    for (const f of filters) {
+      switch (f.operator) {
+        case 'eq':
+          q = q.eq(f.column, f.value);
+          break;
+        case 'neq':
+          q = q.neq(f.column, f.value);
+          break;
+        case 'gt':
+          q = q.gt(f.column, f.value);
+          break;
+        case 'gte':
+          q = q.gte(f.column, f.value);
+          break;
+        case 'lt':
+          q = q.lt(f.column, f.value);
+          break;
+        case 'lte':
+          q = q.lte(f.column, f.value);
+          break;
+        case 'in':
+          q = q.in(f.column, f.value as unknown[]);
+          break;
+        case 'contains':
+          q = q.contains(f.column, f.value as unknown[]);
+          break;
+      }
     }
 
-    return db;
+    const { data, error } = await q;
+    if (error) throw new Error(error.message);
+    return this.mapRows((data ?? []) as Record<string, unknown>[]);
   }
 
-  protected mapSnapshot(documentSnapshot: { id: string; data: () => unknown }) {
-    return {
-      id: documentSnapshot.id,
-      ...(documentSnapshot.data() as Omit<TEntity, 'id'>)
-    } as TEntity;
+  async getById(id: string): Promise<TEntity | null> {
+    const { data, error } = await supabase
+      .from(this.tableName)
+      .select('*')
+      .eq('id', id)
+      .maybeSingle();
+
+    if (error) throw new Error(error.message);
+    return data ? this.mapRow(data as Record<string, unknown>) : null;
   }
 
-  async listByProfessor(professorId: string, constraints: QueryConstraint[] = []) {
-    const instance = this.ensureDb();
-    const snapshot = await getDocs(
-      query(collection(instance, this.collectionName), where('professorId', '==', professorId), ...constraints)
-    );
-    return snapshot.docs.map((item) => this.mapSnapshot(item));
+  async create(professorId: string, data: EntityInput<TEntity>): Promise<TEntity> {
+    const payload = this.toDbPayload(data as unknown as Record<string, unknown>);
+
+    const { data: created, error } = await supabase
+      .from(this.tableName)
+      .insert({
+        ...payload,
+        professor_id: professorId,
+      })
+      .select()
+      .single();
+
+    if (error) throw new Error(error.message);
+    return this.mapRow(created as Record<string, unknown>);
   }
 
-  async getById(id: string) {
-    const instance = this.ensureDb();
-    const snapshot = await getDoc(doc(instance, this.collectionName, id));
-    return snapshot.exists() ? this.mapSnapshot(snapshot) : null;
+  async update(id: string, data: EntityPatch<TEntity>): Promise<void> {
+    const payload = this.toDbPayload(data as unknown as Record<string, unknown>);
+
+    const { error } = await supabase
+      .from(this.tableName)
+      .update(payload)
+      .eq('id', id);
+
+    if (error) throw new Error(error.message);
   }
 
-  async create(professorId: string, data: EntityInput<TEntity>) {
-    const instance = this.ensureDb();
-    const timestamp = new Date().toISOString();
-    const payload = createEntityPayload({
-      ...data,
-      professorId,
-      createdAt: timestamp,
-      updatedAt: timestamp
-    });
+  async remove(id: string): Promise<void> {
+    const { error } = await supabase
+      .from(this.tableName)
+      .delete()
+      .eq('id', id);
 
-    const reference = await addDoc(collection(instance, this.collectionName), payload);
-    return {
-      id: reference.id,
-      ...(payload as Omit<TEntity, 'id'>)
-    } as TEntity;
-  }
-
-  async update(id: string, data: EntityPatch<TEntity>) {
-    const instance = this.ensureDb();
-    const payload = stripUndefined({
-      ...data,
-      updatedAt: new Date().toISOString()
-    });
-
-    await updateDoc(doc(instance, this.collectionName, id), payload);
-  }
-
-  async remove(id: string) {
-    const instance = this.ensureDb();
-    await deleteDoc(doc(instance, this.collectionName, id));
+    if (error) throw new Error(error.message);
   }
 }

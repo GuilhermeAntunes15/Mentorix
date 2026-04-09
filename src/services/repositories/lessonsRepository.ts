@@ -1,11 +1,11 @@
 import { BaseRepository } from '@/services/repositories/baseRepository';
-import type { AulaEntity } from '@/types';
-import { COLLECTIONS } from '@/database/collections';
+import { TABLES } from '@/database/collections';
 import { isLessonScheduledForDate } from '@/utils/lessons';
+import type { AulaEntity } from '@/types';
 
 class LessonsRepository extends BaseRepository<AulaEntity> {
   constructor() {
-    super(COLLECTIONS.aulas);
+    super(TABLES.AULAS);
   }
 
   async listOrdered(professorId: string) {

@@ -1,11 +1,10 @@
-import { where } from 'firebase/firestore';
-import { BaseRepository } from '@/services/repositories/baseRepository';
+import { BaseRepository, type SupabaseFilter } from '@/services/repositories/baseRepository';
+import { TABLES } from '@/database/collections';
 import type { AlunoEntity, AlunoTurmaEntity } from '@/types';
-import { COLLECTIONS } from '@/database/collections';
 
 class StudentsRepository extends BaseRepository<AlunoEntity> {
   constructor() {
-    super(COLLECTIONS.alunos);
+    super(TABLES.ALUNOS);
   }
 
   async listOrdered(professorId: string) {
@@ -16,15 +15,19 @@ class StudentsRepository extends BaseRepository<AlunoEntity> {
 
 class StudentClassRepository extends BaseRepository<AlunoTurmaEntity> {
   constructor() {
-    super(COLLECTIONS.alunoTurma);
+    super(TABLES.ALUNO_TURMA);
   }
 
   listByClass(professorId: string, turmaId: string) {
-    return this.listByProfessor(professorId, [where('turmaId', '==', turmaId)]);
+    return this.listByProfessor(professorId, [
+      { column: 'turma_id', operator: 'eq', value: turmaId }
+    ]);
   }
 
   listByStudent(professorId: string, alunoId: string) {
-    return this.listByProfessor(professorId, [where('alunoId', '==', alunoId)]);
+    return this.listByProfessor(professorId, [
+      { column: 'aluno_id', operator: 'eq', value: alunoId }
+    ]);
   }
 }
 

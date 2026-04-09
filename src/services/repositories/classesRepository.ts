@@ -1,7 +1,7 @@
-import { collection, getDocs } from 'firebase/firestore';
+import { supabase } from '@/services/supabase/client';
 import { BaseRepository } from '@/services/repositories/baseRepository';
+import { TABLES } from '@/database/collections';
 import type { TurmaEntity } from '@/types';
-import { COLLECTIONS } from '@/database/collections';
 
 function normalizeToken(value: string) {
   return value
@@ -14,7 +14,7 @@ function normalizeToken(value: string) {
 
 class ClassesRepository extends BaseRepository<TurmaEntity> {
   constructor() {
-    super(COLLECTIONS.turmas);
+    super(TABLES.TURMAS);
   }
 
   async listOrdered(professorId: string) {
@@ -22,10 +22,13 @@ class ClassesRepository extends BaseRepository<TurmaEntity> {
     return items.sort((left, right) => left.nome.localeCompare(right.nome));
   }
 
-  async listAll() {
-    const instance = this.ensureDb();
-    const snapshot = await getDocs(collection(instance, COLLECTIONS.turmas));
-    return snapshot.docs.map((item) => this.mapSnapshot(item));
+  async listAll(): Promise<TurmaEntity[]> {
+    const { data, error } = await supabase
+      .from(this.tableName)
+      .select('*');
+
+    if (error) throw new Error(error.message);
+    return this.mapRows((data ?? []) as Record<string, unknown>[]);
   }
 
   async listSharedDrafts() {

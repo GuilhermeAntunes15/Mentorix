@@ -1,46 +1,47 @@
-import { collection, getDocs, where } from 'firebase/firestore';
+import { supabase } from '@/services/supabase/client';
 import { BaseRepository } from '@/services/repositories/baseRepository';
-import { COLLECTIONS } from '@/database/collections';
-import { db } from '@/services/firebase/client';
+import { TABLES } from '@/database/collections';
 import type { AvisoMuralEntity, CurtidaAvisoMuralEntity } from '@/types';
-
-function ensureDb() {
-  if (!db) {
-    throw new Error('Firebase nao configurado. Preencha o arquivo .env para habilitar persistencia.');
-  }
-
-  return db;
-}
 
 class NoticeBoardRepository extends BaseRepository<AvisoMuralEntity> {
   constructor() {
-    super(COLLECTIONS.avisosMural);
+    super(TABLES.AVISOS_MURAL);
   }
 
-  listAll() {
-    return getDocs(collection(ensureDb(), COLLECTIONS.avisosMural)).then((snapshot) =>
-      snapshot.docs.map((item) => this.mapSnapshot(item))
-    );
+  async listAll(): Promise<AvisoMuralEntity[]> {
+    const { data, error } = await supabase
+      .from(this.tableName)
+      .select('*');
+
+    if (error) throw new Error(error.message);
+    return this.mapRows((data ?? []) as Record<string, unknown>[]);
   }
 
   listByClass(professorId: string, turmaId: string) {
-    return this.listByProfessor(professorId, [where('turmaId', '==', turmaId)]);
+    return this.listByProfessor(professorId, [
+      { column: 'turma_id', operator: 'eq', value: turmaId }
+    ]);
   }
 }
 
 class NoticeLikesRepository extends BaseRepository<CurtidaAvisoMuralEntity> {
   constructor() {
-    super(COLLECTIONS.curtidasAvisoMural);
+    super(TABLES.CURTIDAS_AVISO_MURAL);
   }
 
-  listAll() {
-    return getDocs(collection(ensureDb(), COLLECTIONS.curtidasAvisoMural)).then((snapshot) =>
-      snapshot.docs.map((item) => this.mapSnapshot(item))
-    );
+  async listAll(): Promise<CurtidaAvisoMuralEntity[]> {
+    const { data, error } = await supabase
+      .from(this.tableName)
+      .select('*');
+
+    if (error) throw new Error(error.message);
+    return this.mapRows((data ?? []) as Record<string, unknown>[]);
   }
 
   listByNotice(professorId: string, avisoId: string) {
-    return this.listByProfessor(professorId, [where('avisoId', '==', avisoId)]);
+    return this.listByProfessor(professorId, [
+      { column: 'aviso_id', operator: 'eq', value: avisoId }
+    ]);
   }
 }
 

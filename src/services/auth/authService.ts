@@ -1,75 +1,83 @@
-import {
-  EmailAuthProvider,
-  createUserWithEmailAndPassword,
-  onAuthStateChanged,
-  reauthenticateWithCredential,
-  signInWithEmailAndPassword,
-  signOut,
-  updatePassword,
-  type User
-} from 'firebase/auth';
-import { auth, provisioningAuth } from '@/services/firebase/client';
+import { supabase } from '@/services/supabase/client';
 import { usersRepository } from '@/services/repositories';
 import { sha256Text } from '@/utils/crypto';
 import type { SubjectAssignment, UserEntity, UserRole } from '@/types';
 
-function ensureAuth() {
-  if (!auth) {
-    throw new Error('Firebase Auth nao configurado. Verifique o arquivo .env.');
-  }
+export function subscribeToAuthState(listener: (user: { id: string } | null) => void) {
+  const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    listener(session?.user ?? null);
+  });
 
-  return auth;
-}
-
-function ensureProvisioningAuth() {
-  if (!provisioningAuth) {
-    throw new Error('Firebase Auth nao configurado. Verifique o arquivo .env.');
-  }
-
-  return provisioningAuth;
-}
-
-export function subscribeToAuthState(listener: (user: User | null) => void) {
-  return onAuthStateChanged(ensureAuth(), listener);
+  return () => {
+    subscription.unsubscribe();
+  };
 }
 
 export async function loginWithEmail(email: string, password: string) {
-  await signInWithEmailAndPassword(ensureAuth(), email, password);
+  const { error } = await supabase.auth.signInWithPassword({ email, password });
+
+  if (error) {
+    throw error;
+  }
 }
 
 export async function logout() {
-  await signOut(ensureAuth());
+  const { error } = await supabase.auth.signOut();
+
+  if (error) {
+    throw error;
+  }
 }
 
 export async function changeCurrentUserPassword(currentPassword: string, nextPassword: string) {
-  const instance = ensureAuth();
-  const currentUser = instance.currentUser;
+  const { data: { user } } = await supabase.auth.getUser();
 
-  if (!currentUser?.email) {
+  if (!user?.email) {
     throw new Error('Nao foi possivel localizar a sessao atual para atualizar a senha.');
   }
 
-  const credential = EmailAuthProvider.credential(currentUser.email, currentPassword);
-  await reauthenticateWithCredential(currentUser, credential);
-  await updatePassword(currentUser, nextPassword);
+  const { error: reAuthError } = await supabase.auth.signInWithPassword({
+    email: user.email,
+    password: currentPassword
+  });
+
+  if (reAuthError) {
+    throw reAuthError;
+  }
+
+  const { error: updateError } = await supabase.auth.updateUser({ password: nextPassword });
+
+  if (updateError) {
+    throw updateError;
+  }
 }
 
 export async function createCurrentUserSignatureProof(password: string) {
-  const instance = ensureAuth();
-  const currentUser = instance.currentUser;
+  const { data: { user } } = await supabase.auth.getUser();
 
-  if (!currentUser?.email) {
+  if (!user?.email) {
     throw new Error('Nao foi possivel validar a sessao atual para assinar o documento.');
   }
 
-  const credential = EmailAuthProvider.credential(currentUser.email, password);
-  await reauthenticateWithCredential(currentUser, credential);
-  const token = await currentUser.getIdToken(true);
+  const { error: reAuthError } = await supabase.auth.signInWithPassword({
+    email: user.email,
+    password
+  });
+
+  if (reAuthError) {
+    throw reAuthError;
+  }
+
+  const { data: { session } } = await supabase.auth.getSession();
+
+  if (!session?.access_token) {
+    throw new Error('Nao foi possivel obter o token de sessao para assinatura.');
+  }
 
   return {
-    authUid: currentUser.uid,
-    email: currentUser.email,
-    proofHash: await sha256Text(token)
+    authUid: user.id,
+    email: user.email,
+    proofHash: await sha256Text(session.access_token)
   };
 }
 
@@ -92,9 +100,19 @@ export async function createManagedAccount({
   studentSyncKey?: string;
   assignedSubjects?: SubjectAssignment[];
 }) {
-  const provision = ensureProvisioningAuth();
-  const credentials = await createUserWithEmailAndPassword(provision, email, password);
-  const authUid = credentials.user.uid;
+  const { data, error } = await supabase.functions.invoke('create-auth-user', {
+    body: { email, password, displayName, role }
+  });
+
+  if (error) {
+    throw new Error(error.message || 'Falha ao criar conta de usuario.');
+  }
+
+  const authUid = data?.uid as string;
+
+  if (!authUid) {
+    throw new Error('Nao foi possivel obter o uid do usuario criado.');
+  }
 
   const userProfile: Omit<UserEntity, 'id' | 'createdAt' | 'updatedAt'> = {
     professorId: role === 'professor' ? authUid : professorId,
@@ -115,6 +133,5 @@ export async function createManagedAccount({
   }
 
   const createdProfile = await usersRepository.createManagedUser(userProfile);
-  await signOut(provision);
   return createdProfile;
 }

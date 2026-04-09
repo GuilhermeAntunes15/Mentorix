@@ -1,10 +1,10 @@
 import { BaseRepository } from '@/services/repositories/baseRepository';
+import { TABLES } from '@/database/collections';
 import type { MateriaEntity } from '@/types';
-import { COLLECTIONS } from '@/database/collections';
 
 class SubjectsRepository extends BaseRepository<MateriaEntity> {
   constructor() {
-    super(COLLECTIONS.materias);
+    super(TABLES.MATERIAS);
   }
 
   async listOrdered(professorId: string) {

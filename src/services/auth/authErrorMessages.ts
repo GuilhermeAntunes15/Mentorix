@@ -1,28 +1,32 @@
-import { FirebaseError } from 'firebase/app';
+import { AuthApiError } from '@supabase/supabase-js';
 
 export function getAuthErrorMessage(error: unknown) {
-  if (!(error instanceof FirebaseError)) {
-    return error instanceof Error ? error.message : 'Nao foi possivel concluir a autenticacao.';
+  if (error instanceof AuthApiError) {
+    switch (error.code) {
+      case 'invalid_credentials':
+        return 'Email ou senha invalidos.';
+      case 'user_not_found':
+        return 'Usuario nao encontrado.';
+      case 'email_not_confirmed':
+        return 'Email nao confirmado.';
+      case 'weak_password':
+        return 'A senha precisa ter pelo menos 6 caracteres.';
+      case 'user_already_exists':
+        return 'Este email ja esta em uso.';
+      case 'over_request_rate_limit':
+        return 'Muitas tentativas em sequencia. Aguarde alguns instantes e tente novamente.';
+      case 'same_password':
+        return 'A nova senha deve ser diferente da senha atual.';
+      case 'validation_failed':
+        return 'Os dados informados nao sao validos.';
+      default:
+        return error.message || 'Nao foi possivel concluir a autenticacao.';
+    }
   }
 
-  switch (error.code) {
-    case 'auth/operation-not-allowed':
-      return 'O login por Email/Senha ainda nao esta habilitado no Firebase. Abra Firebase Console > Authentication > Sign-in method > Email/Password e ative o provedor.';
-    case 'auth/invalid-credential':
-    case 'auth/wrong-password':
-    case 'auth/user-not-found':
-      return 'Email ou senha invalidos.';
-    case 'auth/email-already-in-use':
-      return 'Este email ja esta em uso.';
-    case 'auth/weak-password':
-      return 'A senha precisa ter pelo menos 6 caracteres.';
-    case 'auth/invalid-email':
-      return 'O email informado nao e valido.';
-    case 'auth/requires-recent-login':
-      return 'Por seguranca, entre novamente na conta antes de tentar trocar a senha.';
-    case 'auth/too-many-requests':
-      return 'Muitas tentativas em sequencia. Aguarde alguns instantes e tente novamente.';
-    default:
-      return error.message || 'Nao foi possivel concluir a autenticacao.';
+  if (error instanceof Error) {
+    return error.message;
   }
+
+  return 'Nao foi possivel concluir a autenticacao.';
 }

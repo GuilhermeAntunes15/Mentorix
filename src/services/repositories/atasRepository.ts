@@ -1,68 +1,57 @@
-import {
-  addDoc,
-  collection,
-  doc,
-  getDoc,
-  getDocs,
-  query,
-  updateDoc,
-  where
-} from 'firebase/firestore';
+import { supabase } from '@/services/supabase/client';
 import { BaseRepository } from '@/services/repositories/baseRepository';
-import { COLLECTIONS } from '@/database/collections';
-import { db } from '@/services/firebase/client';
-import { createEntityPayload } from '@/utils/firestore';
+import { TABLES } from '@/database/collections';
 import type { AtaAssinaturaEntity, AtaEntity } from '@/types';
-
-function ensureDb() {
-  if (!db) {
-    throw new Error('Firebase nao configurado. Preencha o arquivo .env para habilitar persistencia.');
-  }
-
-  return db;
-}
 
 class AtasRepository extends BaseRepository<AtaEntity> {
   constructor() {
-    super(COLLECTIONS.atas);
+    super(TABLES.ATAS);
   }
 
-  async listForUser(userId: string) {
-    const instance = ensureDb();
-    const snapshot = await getDocs(
-      query(collection(instance, COLLECTIONS.atas), where('participantUserIds', 'array-contains', userId))
-    );
+  async listForUser(userId: string): Promise<AtaEntity[]> {
+    const { data, error } = await supabase
+      .from(this.tableName)
+      .select('*')
+      .contains('participant_user_ids', [userId]);
 
-    return snapshot.docs
-      .map((item) => this.mapSnapshot(item))
+    if (error) throw new Error(error.message);
+
+    return this.mapRows((data ?? []) as Record<string, unknown>[])
       .sort((left, right) => right.createdAt.localeCompare(left.createdAt));
   }
 
   async touchLock(id: string) {
-    await updateDoc(doc(ensureDb(), COLLECTIONS.atas, id), {
-      lockedAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    });
+    const now = new Date().toISOString();
+    const { error } = await supabase
+      .from(this.tableName)
+      .update({
+        locked_at: now,
+        updated_at: now
+      })
+      .eq('id', id);
+
+    if (error) throw new Error(error.message);
   }
 }
 
 class AtaSignaturesRepository extends BaseRepository<AtaAssinaturaEntity> {
   constructor() {
-    super(COLLECTIONS.assinaturasAta);
+    super(TABLES.ASSINATURAS_ATA);
   }
 
-  async listByAta(ataId: string) {
-    const instance = ensureDb();
-    const snapshot = await getDocs(
-      query(collection(instance, COLLECTIONS.assinaturasAta), where('ataId', '==', ataId))
-    );
+  async listByAta(ataId: string): Promise<AtaAssinaturaEntity[]> {
+    const { data, error } = await supabase
+      .from(this.tableName)
+      .select('*')
+      .eq('ata_id', ataId);
 
-    return snapshot.docs
-      .map((item) => this.mapSnapshot(item))
+    if (error) throw new Error(error.message);
+
+    return this.mapRows((data ?? []) as Record<string, unknown>[])
       .sort((left, right) => left.signedAt.localeCompare(right.signedAt));
   }
 
-  async getByAtaAndSigner(ataId: string, signedByUserId: string) {
+  async getByAtaAndSigner(ataId: string, signedByUserId: string): Promise<AtaAssinaturaEntity | null> {
     const signatures = await this.listByAta(ataId);
     return signatures.find((signature) => signature.signedByUserId === signedByUserId) ?? null;
   }
@@ -70,20 +59,9 @@ class AtaSignaturesRepository extends BaseRepository<AtaAssinaturaEntity> {
   async createSignature(
     professorId: string,
     payload: Omit<AtaAssinaturaEntity, 'id' | 'professorId' | 'createdAt' | 'updatedAt'>
-  ) {
-    const instance = ensureDb();
-    const timestamp = new Date().toISOString();
-    const reference = await addDoc(
-      collection(instance, COLLECTIONS.assinaturasAta),
-      createEntityPayload({
-        ...payload,
-        professorId,
-        createdAt: timestamp,
-        updatedAt: timestamp
-      })
-    );
-
-    return this.getById(reference.id);
+  ): Promise<AtaAssinaturaEntity | null> {
+    const created = await this.create(professorId, payload);
+    return this.getById(created.id);
   }
 }
 

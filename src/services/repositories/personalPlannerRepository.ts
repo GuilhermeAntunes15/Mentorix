@@ -1,25 +1,28 @@
-import { where } from 'firebase/firestore';
 import { BaseRepository } from '@/services/repositories/baseRepository';
-import { COLLECTIONS } from '@/database/collections';
+import { TABLES } from '@/database/collections';
 import type { AgendaPessoalEntity, MateriaPessoalEntity } from '@/types';
 
 class PersonalSubjectsRepository extends BaseRepository<MateriaPessoalEntity> {
   constructor() {
-    super(COLLECTIONS.materiasPessoais);
+    super(TABLES.MATERIAS_PESSOAIS);
   }
 
   listByUser(professorId: string, userId: string) {
-    return this.listByProfessor(professorId, [where('userId', '==', userId)]);
+    return this.listByProfessor(professorId, [
+      { column: 'user_id', operator: 'eq', value: userId }
+    ]);
   }
 }
 
 class PersonalAgendaRepository extends BaseRepository<AgendaPessoalEntity> {
   constructor() {
-    super(COLLECTIONS.agendaPessoal);
+    super(TABLES.AGENDA_PESSOAL);
   }
 
   listByUser(professorId: string, userId: string) {
-    return this.listByProfessor(professorId, [where('userId', '==', userId)]);
+    return this.listByProfessor(professorId, [
+      { column: 'user_id', operator: 'eq', value: userId }
+    ]);
   }
 }
 
