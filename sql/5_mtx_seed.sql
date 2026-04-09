@@ -11,7 +11,7 @@ DECLARE
   -- ===========================================
   -- SUBSTITUA pelo UUID do professor no Supabase
   -- ===========================================
-  v_professor_id UUID := '00000000-0000-0000-0000-000000000000'; -- TROCAR AQUI
+  v_professor_id UUID := 'dd2e8af5-aede-4f26-889e-d430d303caee';
 
   -- Turmas
   v_turma_2a UUID;
