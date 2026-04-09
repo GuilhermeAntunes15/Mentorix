@@ -100,18 +100,34 @@ export async function createManagedAccount({
   studentSyncKey?: string;
   assignedSubjects?: SubjectAssignment[];
 }) {
-  const { data, error } = await supabase.functions.invoke('create-auth-user', {
-    body: { email, password, displayName, role }
+  // Salvar sessao atual do admin antes de criar o novo usuario
+  const { data: { session: adminSession } } = await supabase.auth.getSession();
+
+  // Criar usuario via signUp (isso muda a sessao ativa)
+  const { data: signUpData, error } = await supabase.auth.signUp({
+    email,
+    password,
+    options: {
+      data: { nome: displayName, role }
+    }
   });
 
   if (error) {
     throw new Error(error.message || 'Falha ao criar conta de usuario.');
   }
 
-  const authUid = data?.uid as string;
+  const authUid = signUpData.user?.id;
 
   if (!authUid) {
     throw new Error('Nao foi possivel obter o uid do usuario criado.');
+  }
+
+  // Restaurar sessao do admin
+  if (adminSession?.refresh_token) {
+    await supabase.auth.setSession({
+      access_token: adminSession.access_token,
+      refresh_token: adminSession.refresh_token
+    });
   }
 
   const userProfile: Omit<UserEntity, 'id' | 'createdAt' | 'updatedAt'> = {
