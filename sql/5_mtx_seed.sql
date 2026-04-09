@@ -11,7 +11,7 @@ DECLARE
   -- ===========================================
   -- SUBSTITUA pelo UUID do professor no Supabase
   -- ===========================================
-  v_professor_id UUID := 'dd2e8af5-aede-4f26-889e-d430d303caee';
+  v_professor_id UUID := 'aed115f2-ccfd-40a9-a5ea-87bab8fa2155';
 
   -- Turmas
   v_turma_2a UUID;
@@ -118,6 +118,15 @@ DECLARE
   v_2b_grupo6 UUID;
 
 BEGIN
+  -- ===========================================
+  -- LIMPEZA: Remover dados antigos do professor
+  -- ===========================================
+  DELETE FROM mtx_membros_empresa_competicao WHERE professor_id = v_professor_id;
+  DELETE FROM mtx_empresas_competicao WHERE professor_id = v_professor_id;
+  DELETE FROM mtx_aluno_turma WHERE professor_id = v_professor_id;
+  DELETE FROM mtx_alunos WHERE professor_id = v_professor_id;
+  DELETE FROM mtx_turmas WHERE professor_id = v_professor_id;
+
   -- ===========================================
   -- TURMAS
   -- ===========================================
