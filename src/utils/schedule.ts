@@ -2,7 +2,7 @@ import { addDays, format, startOfWeek } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { toISODate } from '@/utils/date';
 
-export type SchoolKey = 'antonio_pratici' | 'mauricio_goulart';
+export type SchoolKey = 'conselheiro__crispiniano' | 'mauricio_goulart';
 
 export interface SchoolTimeSlot {
   id: string;
@@ -21,14 +21,14 @@ export interface WeekDayOption {
 }
 
 const antonioPraticiSlots: SchoolTimeSlot[] = [
-  { id: 'ap-1', start: '07:00', end: '07:50', label: '07:00 - 07:50', schoolKey: 'antonio_pratici', schoolName: 'Antonio Pratici' },
-  { id: 'ap-2', start: '07:50', end: '08:40', label: '07:50 - 08:40', schoolKey: 'antonio_pratici', schoolName: 'Antonio Pratici' },
-  { id: 'ap-3', start: '08:40', end: '09:30', label: '08:40 - 09:30', schoolKey: 'antonio_pratici', schoolName: 'Antonio Pratici' },
-  { id: 'ap-4', start: '09:30', end: '10:20', label: '09:30 - 10:20', schoolKey: 'antonio_pratici', schoolName: 'Antonio Pratici' },
-  { id: 'ap-5', start: '10:40', end: '11:30', label: '10:40 - 11:30', schoolKey: 'antonio_pratici', schoolName: 'Antonio Pratici' },
-  { id: 'ap-6', start: '11:30', end: '12:20', label: '11:30 - 12:20', schoolKey: 'antonio_pratici', schoolName: 'Antonio Pratici' },
-  { id: 'ap-7', start: '12:20', end: '13:10', label: '12:20 - 13:10', schoolKey: 'antonio_pratici', schoolName: 'Antonio Pratici' },
-  { id: 'ap-8', start: '13:10', end: '14:00', label: '13:10 - 14:00', schoolKey: 'antonio_pratici', schoolName: 'Antonio Pratici' }
+  { id: 'ap-1', start: '07:00', end: '07:50', label: '07:00 - 07:50', schoolKey: 'conselheiro__crispiniano', schoolName: 'Conselheiro Crispiniano' },
+  { id: 'ap-2', start: '07:50', end: '08:40', label: '07:50 - 08:40', schoolKey: 'conselheiro__crispiniano', schoolName: 'Conselheiro Crispiniano' },
+  { id: 'ap-3', start: '08:40', end: '09:30', label: '08:40 - 09:30', schoolKey: 'conselheiro__crispiniano', schoolName: 'Conselheiro Crispiniano' },
+  { id: 'ap-4', start: '09:30', end: '10:20', label: '09:30 - 10:20', schoolKey: 'conselheiro__crispiniano', schoolName: 'Conselheiro Crispiniano' },
+  { id: 'ap-5', start: '10:40', end: '11:30', label: '10:40 - 11:30', schoolKey: 'conselheiro__crispiniano', schoolName: 'Conselheiro Crispiniano' },
+  { id: 'ap-6', start: '11:30', end: '12:20', label: '11:30 - 12:20', schoolKey: 'conselheiro__crispiniano', schoolName: 'Conselheiro Crispiniano' },
+  { id: 'ap-7', start: '12:20', end: '13:10', label: '12:20 - 13:10', schoolKey: 'conselheiro__crispiniano', schoolName: 'Conselheiro Crispiniano' },
+  { id: 'ap-8', start: '13:10', end: '14:00', label: '13:10 - 14:00', schoolKey: 'conselheiro__crispiniano', schoolName: 'Conselheiro Crispiniano' }
 ];
 
 const mauricioGoulartSlots: SchoolTimeSlot[] = [
@@ -39,12 +39,12 @@ const mauricioGoulartSlots: SchoolTimeSlot[] = [
 ];
 
 export const schoolOptions = [
-  { value: 'antonio_pratici', label: 'Antonio Pratici' },
+  { value: 'conselheiro__crispiniano', label: 'Conselheiro Crispiniano' },
   { value: 'mauricio_goulart', label: 'Mauricio Goulart' }
 ] as const;
 
 export const schoolSlotMap: Record<SchoolKey, SchoolTimeSlot[]> = {
-  antonio_pratici: antonioPraticiSlots,
+  conselheiro__crispiniano: antonioPraticiSlots,
   mauricio_goulart: mauricioGoulartSlots
 };
 

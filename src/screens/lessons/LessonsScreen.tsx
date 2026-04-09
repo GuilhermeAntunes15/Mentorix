@@ -133,8 +133,7 @@ export function LessonsScreen() {
                 onChange={(event) => setEditing({ ...editing, escola: event.target.value })}
                 options={[
                   { value: '', label: 'Selecione a escola' },
-                  { value: 'Antonio Pratici', label: 'Antonio Pratici' },
-                  { value: 'Mauricio Goulart', label: 'Mauricio Goulart' }
+                  { value: 'Conselheiro Crispiiniano', label: 'Conselheiro Crispiiniano' },
                 ]}
               />
               <TextArea
