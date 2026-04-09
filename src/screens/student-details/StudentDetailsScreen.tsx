@@ -1,10 +1,11 @@
-import { CheckCircle2, Download, XCircle } from 'lucide-react';
+import { CheckCircle2, Download, Plus, Star, Trash2, XCircle } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { Badge } from '@/components/common/Badge';
 import { Button } from '@/components/common/Button';
 import { Card } from '@/components/common/Card';
 import { Input } from '@/components/common/Input';
+import { Modal } from '@/components/common/Modal';
 import { PageHeader } from '@/components/common/PageHeader';
 import { StatCard } from '@/components/common/StatCard';
 import { TextArea } from '@/components/common/TextArea';
@@ -12,9 +13,10 @@ import { EmptyState } from '@/components/feedback/EmptyState';
 import { ErrorState } from '@/components/feedback/ErrorState';
 import { LoadingState } from '@/components/feedback/LoadingState';
 import { useProfessor, useStudentDetails } from '@/hooks';
-import { activityDeliveriesRepository, quizAttemptsRepository, studentProfilesRepository } from '@/services/repositories';
+import { activityDeliveriesRepository, quizAttemptsRepository, studentProfilesRepository, studentScoresRepository } from '@/services/repositories';
 import { calculateAttendancePercentage, summarizeMakeups } from '@/utils/metrics';
 import { openStudentReportPrintWindow } from '@/utils/studentReport';
+import type { PontuacaoAlunoEntity } from '@/types';
 
 export function StudentDetailsScreen() {
   const { professorId } = useProfessor();
@@ -24,9 +26,24 @@ export function StudentDetailsScreen() {
   const [savingPendingId, setSavingPendingId] = useState<string | null>(null);
   const [activityScores, setActivityScores] = useState<Record<string, string>>({});
 
+  // Pontuacao individual
+  const [scores, setScores] = useState<PontuacaoAlunoEntity[]>([]);
+  const [scoresLoading, setScoresLoading] = useState(true);
+  const [scoreModalOpen, setScoreModalOpen] = useState(false);
+  const [scoreForm, setScoreForm] = useState({ descricao: '', pontos: 0, data: new Date().toISOString().split('T')[0] });
+
   useEffect(() => {
     setProfileText(data?.perfil?.perfilTexto ?? '');
   }, [data?.perfil?.perfilTexto]);
+
+  useEffect(() => {
+    if (!studentId) return;
+    setScoresLoading(true);
+    studentScoresRepository.listByStudent(professorId, studentId)
+      .then(setScores)
+      .catch(() => setScores([]))
+      .finally(() => setScoresLoading(false));
+  }, [professorId, studentId]);
 
   useEffect(() => {
     if (!data) {
@@ -62,6 +79,34 @@ export function StudentDetailsScreen() {
   }, [data]);
 
   const makeupSummary = useMemo(() => summarizeMakeups(data?.reposicoes ?? [], data?.entregasReposicao ?? []), [data?.entregasReposicao, data?.reposicoes]);
+
+  const totalPontos = useMemo(() => scores.reduce((sum, s) => sum + s.pontos, 0), [scores]);
+
+  async function reloadScores() {
+    if (!studentId) return;
+    const result = await studentScoresRepository.listByStudent(professorId, studentId);
+    setScores(result);
+  }
+
+  async function handleAddScore(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!studentId || !data?.turmas.length) return;
+    await studentScoresRepository.create(professorId, {
+      alunoId: studentId,
+      turmaId: data.turmas[0].id,
+      descricao: scoreForm.descricao,
+      pontos: scoreForm.pontos,
+      data: scoreForm.data
+    });
+    setScoreForm({ descricao: '', pontos: 0, data: new Date().toISOString().split('T')[0] });
+    setScoreModalOpen(false);
+    await reloadScores();
+  }
+
+  async function handleRemoveScore(scoreId: string) {
+    await studentScoresRepository.remove(scoreId);
+    await reloadScores();
+  }
 
   async function saveProfile() {
     if (!data || !studentId) {
@@ -175,7 +220,55 @@ export function StudentDetailsScreen() {
         <StatCard label="Acertos de primeira" value={metrics.acertouDePrimeira} helper={`${metrics.percentualAcertoPrimeira}% do total`} />
         <StatCard label="Media de quizzes" value={metrics.mediaQuizzesTurma} helper="Media por turma do aluno" />
         <StatCard label="Media de atividades" value={metrics.mediaAtividades} helper="Notas corrigidas" />
+        <StatCard label="Pontuacao individual" value={totalPontos} helper="Pontos acumulados" />
       </div>
+
+      <Card
+        title="Pontuacao individual"
+        subtitle="Registre pontos por participacao, apresentacoes, comportamento e outras contribuicoes."
+        actions={
+          <Button onClick={() => setScoreModalOpen(true)}>
+            <Plus size={16} /> Dar pontos
+          </Button>
+        }
+      >
+        {scoresLoading ? (
+          <p style={{ color: '#94a3b8' }}>Carregando pontos...</p>
+        ) : scores.length ? (
+          <div style={{ display: 'grid', gap: '0.75rem' }}>
+            {[...scores].sort((a, b) => b.data.localeCompare(a.data)).map((score) => (
+              <div
+                key={score.id}
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  gap: '1rem',
+                  alignItems: 'center',
+                  padding: '0.75rem 1rem',
+                  borderRadius: 12,
+                  background: 'rgba(15, 23, 42, 0.56)',
+                  border: '1px solid rgba(148, 163, 184, 0.1)'
+                }}
+              >
+                <div style={{ display: 'grid', gap: '0.2rem' }}>
+                  <strong>{score.descricao}</strong>
+                  <span style={{ color: '#94a3b8', fontSize: '0.85rem' }}>{score.data}</span>
+                </div>
+                <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+                  <Badge tone={score.pontos >= 0 ? 'success' : 'danger'}>
+                    <Star size={14} /> {score.pontos > 0 ? '+' : ''}{score.pontos} pts
+                  </Badge>
+                  <Button variant="danger" onClick={() => void handleRemoveScore(score.id)}>
+                    <Trash2 size={14} />
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <EmptyState title="Sem pontos registrados" description="Use o botao acima para dar pontos a este aluno." />
+        )}
+      </Card>
 
       <div className="responsive-grid" style={{ alignItems: 'start' }}>
         <Card title="Perfil do aluno" subtitle="Texto livre editavel para anotar contexto, comportamento e acompanhamento.">
@@ -303,6 +396,40 @@ export function StudentDetailsScreen() {
           </div>
         </Card>
       </div>
+
+      <Modal
+        open={scoreModalOpen}
+        onClose={() => setScoreModalOpen(false)}
+        title="Dar pontos"
+        subtitle={`Registrar pontos para ${data.aluno.nome}`}
+      >
+        <form onSubmit={handleAddScore} style={{ display: 'grid', gap: '1rem', marginTop: '1rem' }}>
+          <Input
+            label="Descricao"
+            value={scoreForm.descricao}
+            onChange={(event) => setScoreForm({ ...scoreForm, descricao: event.target.value })}
+            required
+          />
+          <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+            <Input
+              label="Pontos"
+              type="number"
+              value={scoreForm.pontos}
+              onChange={(event) => setScoreForm({ ...scoreForm, pontos: Number(event.target.value) })}
+              required
+            />
+            <Input
+              label="Data"
+              type="date"
+              value={scoreForm.data}
+              onChange={(event) => setScoreForm({ ...scoreForm, data: event.target.value })}
+            />
+          </div>
+          <Button type="submit">
+            <Star size={16} /> Registrar pontos
+          </Button>
+        </form>
+      </Modal>
     </>
   );
 }
