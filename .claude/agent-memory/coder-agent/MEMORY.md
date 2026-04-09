@@ -25,3 +25,9 @@
 - `toSnakeCase`/`toCamelCase` for conversion (first-level keys only)
 - Upsert with `onConflict` for batch operations
 - Error handling: `if (error) throw new Error(error.message)`
+
+## Migration Status
+- Firebase fully removed (no dependencies, no files, no references)
+- Only Supabase remains as backend
+- `collections.ts` has only TABLES/TableName (COLLECTIONS/CollectionName removed)
+- `.env` has only VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY

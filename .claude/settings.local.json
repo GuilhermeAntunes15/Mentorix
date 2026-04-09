@@ -5,7 +5,8 @@
       "Bash(wc:*)",
       "Bash(npm install:*)",
       "Bash(npx tsc:*)",
-      "Bash(echo \"EXIT_CODE=$?\")"
+      "Bash(echo \"EXIT_CODE=$?\")",
+      "Bash(npm uninstall:*)"
     ]
   }
 }
